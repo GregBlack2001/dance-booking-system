@@ -25,5 +25,13 @@ router.get('/classes', (req, res) => {
   });
 });
 
-module.exports = router;
+// About page
+router.get('/about', (req, res) => {
+  res.render('about', {
+    title: 'About Us',
+    user: req.session.user,
+    isAdmin: req.session.user?.role === 'admin'
+  });
+});
 
+module.exports = router;

@@ -32,15 +32,34 @@ app.use((req, res, next) => {
 });
 
 // Route setup
+// Route setup
 const courseRoutes = require('./routes/courseRoutes');
 const publicRoutes = require('./routes/publicRoutes');
 const authRoutes = require('./routes/authRoutes');
 const bookingRoutes = require('./routes/bookingRoutes');
+const organiserRoutes = require('./routes/organiserRoutes');
 
 app.use('/courses', courseRoutes);
 app.use('/', publicRoutes);
 app.use('/', authRoutes);
 app.use('/', bookingRoutes);
+app.use('/', organiserRoutes);
+
+// Error handling middleware
+app.use((req, res) => {
+  res.status(404).render('error', {
+    title: 'Page Not Found',
+    message: 'The page you requested could not be found.'
+  });
+});
+
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(500).render('error', {
+    title: 'Server Error',
+    message: 'Something went wrong on our end.'
+  });
+});
 
 // Server startup
 app.listen(port, () => {

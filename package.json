@@ -1,13 +1,18 @@
 {
   "name": "dance-booking-system",
   "version": "1.0.0",
-  "description": "",
+  "description": "A booking system for a local dance organization",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "nodemon index.js"
+    "start": "nodemon index.js",
+    "dev": "nodemon index.js"
   },
-  "keywords": [],
+  "keywords": [
+    "dance",
+    "booking",
+    "classes"
+  ],
   "author": "",
   "license": "ISC",
   "type": "commonjs",

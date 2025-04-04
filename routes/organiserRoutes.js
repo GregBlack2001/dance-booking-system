@@ -16,4 +16,22 @@ router.get('/participants/:id', ensureAuthenticated, ensureAdmin, (req, res) => 
   });
 });
 
+// Generate class list report
+router.get('/reports/class-list/:id', ensureAuthenticated, ensureAdmin, (req, res) => {
+  courseModel.getCourseById(req.params.id, (err, course) => {
+    if (err || !course) return res.status(404).send("Course not found");
+
+    bookingModel.getBookingsByCourse(req.params.id, (err, bookings) => {
+      if (err) return res.status(500).send("Error loading bookings");
+      
+      res.render('class-list-report', { 
+        course, 
+        bookings,
+        title: `Class List: ${course.title}`,
+        generateDate: new Date().toLocaleDateString()
+      });
+    });
+  });
+});
+
 module.exports = router;

@@ -1,4 +1,5 @@
 const courseModel = require('../models/courseModel');
+const bookingModel = require('../models/bookingModel');
 
 // Show all courses
 exports.showCourses = (req, res) => {
@@ -6,7 +7,7 @@ exports.showCourses = (req, res) => {
     if (err) return res.status(500).send("Error retrieving courses");
     res.render('courses', {
       courses,
-      isAdmin: req.session.user.role === 'admin'
+      isAdmin: req.session.user && req.session.user.role === 'admin'
     });
   });
 };
@@ -22,8 +23,13 @@ exports.addCourse = (req, res) => {
     title: req.body.title,
     instructor: req.body.instructor,
     date: req.body.date,
-    description: req.body.description
+    description: req.body.description,
+    location: req.body.location || 'Main Studio',
+    price: parseFloat(req.body.price) || 10.00,
+    capacity: parseInt(req.body.capacity) || null,
+    duration: req.body.duration || '1 hour'
   };
+  
   courseModel.createCourse(course, (err) => {
     if (err) return res.status(500).send("Error adding course");
     res.redirect('/courses');
@@ -44,8 +50,13 @@ exports.editCourse = (req, res) => {
     title: req.body.title,
     instructor: req.body.instructor,
     date: req.body.date,
-    description: req.body.description
+    description: req.body.description,
+    location: req.body.location,
+    price: parseFloat(req.body.price) || 0,
+    capacity: parseInt(req.body.capacity) || null,
+    duration: req.body.duration
   };
+  
   courseModel.updateCourse(req.params.id, updated, (err) => {
     if (err) return res.status(500).send("Error updating course");
     res.redirect('/courses');
@@ -60,3 +71,53 @@ exports.deleteCourse = (req, res) => {
   });
 };
 
+// Show admin dashboard
+exports.adminDashboard = (req, res) => {
+  courseModel.getAllCourses((err, courses) => {
+    if (err) return res.status(500).send('Failed to load courses');
+    
+    res.render('admin-dashboard', {
+      title: 'Admin Dashboard',
+      courses
+    });
+  });
+};
+
+// Search courses
+exports.searchCourses = (req, res) => {
+  const keyword = req.query.keyword;
+  
+  if (!keyword) {
+    return res.redirect('/classes');
+  }
+  
+  courseModel.searchCourses(keyword, (err, courses) => {
+    if (err) return res.status(500).send("Error searching courses");
+    
+    res.render('classes', {
+      title: `Search Results for "${keyword}"`,
+      courses,
+      user: req.session.user,
+      isAdmin: req.session.user?.role === 'admin',
+      searchQuery: keyword
+    });
+  });
+};
+
+// Show participants for a specific course
+exports.showParticipants = (req, res) => {
+  const courseId = req.params.id;
+  
+  courseModel.getCourseById(courseId, (err, course) => {
+    if (err || !course) return res.status(404).send("Course not found");
+    
+    bookingModel.getBookingsByCourse(courseId, (err, bookings) => {
+      if (err) return res.status(500).send("Error retrieving bookings");
+      
+      res.render('participant-list', {
+        course,
+        bookings
+      });
+    });
+  });
+};
