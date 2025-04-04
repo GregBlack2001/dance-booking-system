@@ -1,0 +1,32 @@
+<nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom mb-4">
+  <div class="container">
+    <a class="navbar-brand fw-bold" href="/">DanceMove</a>
+
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
+      aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+
+    <div class="collapse navbar-collapse" id="navbarNav">
+      <ul class="navbar-nav ms-auto">
+        <li class="nav-item"><a class="nav-link" href="/classes">Courses & Classes</a></li>
+
+        {{#user}}
+          <li class="nav-item"><a class="nav-link" href="/my-bookings">My Bookings</a></li>
+          {{#isAdmin}}
+            <li class="nav-item"><a class="nav-link" href="/courses/add">Add Class</a></li>
+          {{/isAdmin}}
+          <li class="nav-item"><a class="nav-link" href="/logout">Logout</a></li>
+        {{/user}}
+
+        {{^user}}
+          <li class="nav-item"><a class="nav-link" href="/login">Login</a></li>
+          <li class="nav-item"><a class="nav-link" href="/register">Register</a></li>
+        {{/user}}
+      </ul>
+    </div>
+  </div>
+</nav>
+
+
+

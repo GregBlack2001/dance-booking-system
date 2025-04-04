@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Book {{course.title}}</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+
+<div class="container py-5">
+  <h2 class="mb-4">Book: {{course.title}}</h2>
+
+  <form method="POST" action="/book/{{course._id}}">
+    <div class="mb-3">
+      <label class="form-label">Your Name</label>
+      <input type="text" name="name" class="form-control" required>
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">Your Email</label>
+      <input type="email" name="email" class="form-control" required>
+    </div>
+
+    <button type="submit" class="btn btn-primary">Confirm Booking</button>
+    <a href="/classes" class="btn btn-secondary ms-2">Cancel</a>
+  </form>
+</div>
+
+</body>
+</html>

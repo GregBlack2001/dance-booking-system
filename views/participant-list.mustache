@@ -1,0 +1,18 @@
+<h2 class="mb-4">Participants for {{course.title}}</h2>
+
+{{#bookings.length}}
+  <ul class="list-group mb-3">
+    {{#bookings}}
+      <li class="list-group-item">
+        {{name}} ({{email}})
+        {{#username}} - username: {{username}}{{/username}}
+      </li>
+    {{/bookings}}
+  </ul>
+{{/bookings.length}}
+
+{{^bookings.length}}
+  <div class="alert alert-info">No bookings yet for this course.</div>
+{{/bookings.length}}
+
+<a href="/courses" class="btn btn-secondary">Back to Courses</a>
