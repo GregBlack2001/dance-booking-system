@@ -1,6 +1,11 @@
 const express = require('express');
 const router = express.Router();
+
+// Debug logging
+console.log('Attempting to import bookingController');
 const bookingController = require('../controllers/bookingController');
+console.log('Imported bookingController methods:', Object.keys(bookingController));
+
 const { ensureAuthenticated, ensureAdmin } = require('../middleware/auth');
 
 // Public users booking form (for a specific course)

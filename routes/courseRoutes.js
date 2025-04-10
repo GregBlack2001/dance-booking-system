@@ -22,4 +22,9 @@ router.get('/search', courseController.searchCourses);
 // View participants for a course
 router.get('/participants/:id', ensureAdmin, courseController.showParticipants);
 
+// Generate class list report
+router.get('/class-list/:id', ensureAdmin, courseController.generateClassList);
+
+router.get('/filter', ensureAdmin, courseController.filterCourses);
+
 module.exports = router;

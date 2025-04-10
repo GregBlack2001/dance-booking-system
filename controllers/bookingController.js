@@ -3,14 +3,26 @@ const bookingModel = require('../models/bookingModel');
 
 // Show booking form for public users
 exports.bookingForm = (req, res) => {
+  console.log('--- Booking Form Request ---');
+  console.log('Course ID:', req.params.id);
+
   courseModel.getCourseById(req.params.id, (err, course) => {
-    if (err || !course) return res.status(404).send("Course not found");
+    if (err || !course) {
+      console.error('Course Not Found Error:', err);
+      return res.status(404).send("Course not found");
+    }
     
     // Check if the course is available (has capacity)
     courseModel.checkAvailability(req.params.id, (err, result) => {
-      if (err) return res.status(500).send("Error checking availability");
+      if (err) {
+        console.error('Availability Check Error:', err);
+        return res.status(500).send("Error checking availability");
+      }
       
+      console.log('Availability Result:', result);
+
       if (result.capacity && !result.isAvailable) {
+        console.log('Course is fully booked');
         return res.render('book-course', { 
           course,
           error: 'This course is fully booked.',
@@ -20,7 +32,7 @@ exports.bookingForm = (req, res) => {
       
       res.render('book-course', { 
         course,
-        spotsLeft: result.spotsLeft
+        spotsLeft: result.spotsLeft || 'Unlimited'
       });
     });
   });
@@ -28,23 +40,39 @@ exports.bookingForm = (req, res) => {
 
 // Handle booking (both logged-in and public)
 exports.bookCourse = (req, res) => {
+  console.log('--- Booking Request Start ---');
+  console.log('Course ID:', req.params.id);
+  console.log('User Session:', req.session.user);
+  console.log('Request Body:', req.body);
+  console.log('Is XHR Request:', req.xhr);
+
   const courseId = req.params.id;
 
   // First check if course exists
   courseModel.getCourseById(courseId, (err, course) => {
-    if (err || !course) {
-      if (req.xhr) return res.status(404).send("Course not found");
+    if (err) {
+      console.error('Course Lookup Error:', err);
+      return res.status(500).send("Error finding course");
+    }
+    
+    if (!course) {
+      console.log('Course Not Found:', courseId);
       return res.status(404).send("Course not found");
     }
+    
+    console.log('Course Found:', course);
     
     // Then check availability if course has capacity
     courseModel.checkAvailability(courseId, (err, result) => {
       if (err) {
-        if (req.xhr) return res.status(500).send("Error checking availability");
+        console.error('Availability Check Error:', err);
         return res.status(500).send("Error checking availability");
       }
       
+      console.log('Availability Check Result:', result);
+      
       if (result.capacity && !result.isAvailable) {
+        console.log('Course is fully booked');
         if (req.xhr) {
           return res.status(409).send("This course is fully booked");
         } else {
@@ -64,14 +92,16 @@ exports.bookCourse = (req, res) => {
           username: req.session.user.username
         };
 
+        console.log('Checking for duplicate booking:', query);
+
         bookingModel.checkDuplicateBooking(query, (err, existing) => {
           if (err) {
-            if (req.xhr) return res.status(500).send("Error checking booking");
+            console.error('Duplicate Booking Check Error:', err);
             return res.status(500).send("Error checking booking");
           }
           
           if (existing) {
-            if (req.xhr) return res.status(409).send("You have already booked this course");
+            console.log('Duplicate Booking Found');
             return res.status(409).send("You have already booked this course");
           }
 
@@ -82,19 +112,21 @@ exports.bookCourse = (req, res) => {
             username: req.session.user.username
           };
 
+          console.log('Creating Booking:', booking);
+
           bookingModel.createBooking(booking, (err) => {
             if (err) {
-              if (req.xhr) return res.status(500).send("Error saving booking");
+              console.error('Booking Creation Error:', err);
               return res.status(500).send("Error saving booking");
             }
             
-            if (req.xhr) return res.status(200).send("Booking successful");
-            return res.redirect('/my-bookings');
+            console.log('Booking Created Successfully');
+            return res.status(200).send("Booking successful");
           });
         });
 
       } else {
-        // Public user booking
+        // Public user booking logic
         const { name, email } = req.body;
         
         if (!name || !email) {
@@ -134,14 +166,23 @@ exports.bookCourse = (req, res) => {
 
 // Get my bookings
 exports.getMyBookings = (req, res) => {
+  console.log('--- My Bookings Request ---');
+  console.log('User Session:', req.session.user);
+
   if (!req.session.user) {
+    console.log('No user session, redirecting to login');
     return res.redirect('/login');
   }
   
   const username = req.session.user.username;
   
   bookingModel.getBookingsByUsername(username, (err, bookings) => {
-    if (err) return res.status(500).send("Error retrieving bookings");
+    if (err) {
+      console.error('Bookings Retrieval Error:', err);
+      return res.status(500).send("Error retrieving bookings");
+    }
+    
+    console.log('Bookings Found:', bookings.length);
     
     // Enrich bookings with course details
     Promise.all(bookings.map(booking => {
@@ -161,13 +202,22 @@ exports.getMyBookings = (req, res) => {
         title: 'My Bookings',
         bookings: enrichedBookings
       });
+    })
+    .catch(error => {
+      console.error('Booking Enrichment Error:', error);
+      res.status(500).send("Error processing bookings");
     });
   });
 };
 
 // Cancel booking
 exports.cancelBooking = (req, res) => {
+  console.log('--- Cancel Booking Request ---');
+  console.log('User Session:', req.session.user);
+  console.log('Booking ID:', req.params.id);
+
   if (!req.session.user) {
+    console.log('No user session, unauthorized');
     return res.status(401).send("You must be logged in to cancel a booking");
   }
   
@@ -175,36 +225,45 @@ exports.cancelBooking = (req, res) => {
   
   bookingModel.getBookingById(bookingId, (err, booking) => {
     if (err || !booking) {
-      if (req.xhr) return res.status(404).send("Booking not found");
+      console.error('Booking Not Found Error:', err);
       return res.status(404).send("Booking not found");
     }
     
     // Make sure the user owns this booking or is an admin
     if (booking.username !== req.session.user.username && req.session.user.role !== 'admin') {
-      if (req.xhr) return res.status(403).send("Unauthorized");
+      console.log('Unauthorized booking cancellation attempt');
       return res.status(403).send("Unauthorized");
     }
     
     bookingModel.deleteBooking(bookingId, (err) => {
       if (err) {
-        if (req.xhr) return res.status(500).send("Error canceling booking");
+        console.error('Booking Cancellation Error:', err);
         return res.status(500).send("Error canceling booking");
       }
       
-      if (req.xhr) return res.status(200).send("Booking cancelled");
-      return res.redirect('/my-bookings');
+      console.log('Booking Cancelled Successfully');
+      return res.status(200).send("Booking cancelled");
     });
   });
 };
 
 // Admin: View all bookings
 exports.getAllBookings = (req, res) => {
+  console.log('--- Admin All Bookings Request ---');
+  console.log('User Session:', req.session.user);
+
   if (!req.session.user || req.session.user.role !== 'admin') {
+    console.log('Unauthorized access attempt');
     return res.status(403).send("Unauthorized");
   }
   
   bookingModel.getAllBookings((err, bookings) => {
-    if (err) return res.status(500).send("Error retrieving bookings");
+    if (err) {
+      console.error('Bookings Retrieval Error:', err);
+      return res.status(500).send("Error retrieving bookings");
+    }
+    
+    console.log('Total Bookings Found:', bookings.length);
     
     // Enrich bookings with course details
     Promise.all(bookings.map(booking => {
@@ -224,6 +283,10 @@ exports.getAllBookings = (req, res) => {
         title: 'All Bookings',
         bookings: enrichedBookings
       });
+    })
+    .catch(error => {
+      console.error('Booking Enrichment Error:', error);
+      res.status(500).send("Error processing bookings");
     });
   });
 };

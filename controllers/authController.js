@@ -2,12 +2,15 @@ const userModel = require('../models/userModel');
 
 // Show register form
 exports.showRegister = (req, res) => {
+  // Save the referring page to redirect back after registration
+  req.session.returnTo = req.headers.referer || '/';
   res.render('register');
 };
 
 // Handle registration
 exports.register = (req, res) => {
   const { name, email, username, password } = req.body;
+  const returnUrl = req.session.returnTo || '/classes';
 
   if (!name || !email || !username || !password) {
     return res.render('register', { error: 'All fields are required' });
@@ -23,19 +26,23 @@ exports.register = (req, res) => {
       if (err) return res.render('register', { error: 'Failed to register' });
 
       req.session.user = newUser;
-      res.redirect('/classes');
+      delete req.session.returnTo; // Clear the stored URL
+      res.redirect(returnUrl);
     });
   });
 };
 
 // Show login form
 exports.showLogin = (req, res) => {
+  // Save the referring page to redirect back after login
+  req.session.returnTo = req.headers.referer || '/';
   res.render('login');
 };
 
 // Handle login
 exports.login = (req, res) => {
   const { username, password } = req.body;
+  const returnUrl = req.session.returnTo || '/classes';
 
   userModel.authenticateUser(username, password, (err, user) => {
     if (err || !user) {
@@ -43,18 +50,22 @@ exports.login = (req, res) => {
     }
 
     req.session.user = user;
-    if (user.role === 'admin') {
+    delete req.session.returnTo; // Clear the stored URL
+    
+    // If the user is an admin and was trying to access a non-admin page
+    if (user.role === 'admin' && !returnUrl.includes('/admin') && !returnUrl.includes('/courses/')) {
       res.redirect('/courses/admin');
     } else {
-      res.redirect('/classes');
+      res.redirect(returnUrl);
     }
   });
 };
 
 // Logout
 exports.logout = (req, res) => {
+  const returnUrl = req.headers.referer || '/';
   req.session.destroy(() => {
-    res.redirect('/');
+    res.redirect(returnUrl);
   });
 };
 
@@ -67,9 +78,16 @@ exports.showUsers = (req, res) => {
   userModel.getAllUsers((err, users) => {
     if (err) return res.status(500).send('Failed to load users');
     
+    // Add boolean flags for each user's role to help with the template
+    const enrichedUsers = users.map(user => ({
+      ...user,
+      isAdmin: user.role === 'admin',
+      isUser: user.role === 'user'
+    }));
+    
     res.render('manage-users', {
       title: 'User Management',
-      users
+      users: enrichedUsers
     });
   });
 };
@@ -96,6 +114,11 @@ exports.deleteUser = (req, res) => {
   }
   
   const { username } = req.params;
+  
+  // Prevent self-deletion
+  if (username === req.session.user.username) {
+    return res.status(400).send('You cannot delete your own account');
+  }
   
   userModel.deleteUser(username, (err) => {
     if (err) return res.status(500).send('Failed to delete user');

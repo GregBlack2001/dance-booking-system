@@ -9,16 +9,36 @@
 
     <div class="collapse navbar-collapse" id="navbarNav">
       <ul class="navbar-nav ms-auto">
+        <!-- Everyone can see Classes link -->
         <li class="nav-item"><a class="nav-link" href="/classes">Courses & Classes</a></li>
-
+        
+        <!-- Admin Navigation -->
+        {{#isAdmin}}
+          <li class="nav-item"><a class="nav-link" href="/courses/admin">Admin Dashboard</a></li>
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" href="#" id="adminDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+              Admin Tools
+            </a>
+            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="adminDropdown">
+              <li><a class="dropdown-item" href="/courses/add">Add New Course</a></li>
+              <li><a class="dropdown-item" href="/admin/users">Manage Users</a></li>
+              <li><a class="dropdown-item" href="/admin/bookings">View All Bookings</a></li>
+              <li><hr class="dropdown-divider"></li>
+              <li><a class="dropdown-item" href="/my-bookings">My Bookings</a></li>
+              <li><a class="dropdown-item" href="/logout">Logout</a></li>
+            </ul>
+          </li>
+        {{/isAdmin}}
+        
+        <!-- Regular User Navigation -->
         {{#user}}
-          <li class="nav-item"><a class="nav-link" href="/my-bookings">My Bookings</a></li>
-          {{#isAdmin}}
-            <li class="nav-item"><a class="nav-link" href="/courses/add">Add Class</a></li>
+          {{^isAdmin}}
+            <li class="nav-item"><a class="nav-link" href="/my-bookings">My Bookings</a></li>
+            <li class="nav-item"><a class="nav-link" href="/logout">Logout</a></li>
           {{/isAdmin}}
-          <li class="nav-item"><a class="nav-link" href="/logout">Logout</a></li>
         {{/user}}
 
+        <!-- Guest Navigation -->
         {{^user}}
           <li class="nav-item"><a class="nav-link" href="/login">Login</a></li>
           <li class="nav-item"><a class="nav-link" href="/register">Register</a></li>
@@ -27,6 +47,3 @@
     </div>
   </div>
 </nav>
-
-
-
