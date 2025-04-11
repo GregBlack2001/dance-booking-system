@@ -18,6 +18,9 @@
           </div>
           <div class="card-body">
             <form method="POST" action="{{#course}}/courses/edit/{{course._id}}{{/course}}{{^course}}/courses/add{{/course}}">
+              <!-- CSRF Token -->
+              <input type="hidden" name="_csrf" value="{{csrfToken}}">
+
               <div class="mb-3">
                 <label for="title" class="form-label">Course Title</label>
                 <input type="text" id="title" name="title" class="form-control" value="{{course.title}}" required>

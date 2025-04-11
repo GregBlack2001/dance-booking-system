@@ -3,14 +3,22 @@ const mustacheExpress = require('mustache-express');
 const path = require('path');
 const session = require('express-session');
 const cookieParser = require('cookie-parser');
-const { helmet, sanitizeInputs } = require('./middleware/security');
+const { 
+  helmet, 
+  sanitizeInputs, 
+  limiter, 
+  csrfProtection 
+} = require('./middleware/security');
 require('dotenv').config();
 
 const app = express();
 const port = process.env.PORT || 3000;
 
+// Apply rate limiting to all requests
+app.use(limiter);
+
 // Security middleware
-app.use(helmet()); // Add security headers
+app.use(helmet());
 app.use(cookieParser());
 
 // Mustache templating setup with partials
@@ -22,8 +30,10 @@ app.set('view engine', 'mustache');
 app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
+
+// Session configuration with enhanced security
 app.use(session({
-    secret: process.env.SESSION_SECRET || 'mysecret',
+    secret: process.env.SESSION_SECRET || 'fallback_secret',
     resave: false,
     saveUninitialized: false,
     cookie: { 
@@ -34,15 +44,18 @@ app.use(session({
     }
 }));
 
+// CSRF Protection
+app.use(csrfProtection);
+
 // Sanitize all inputs to prevent XSS
 app.use(sanitizeInputs);
 
-// Inject user & isAdmin to all views
+// Inject CSRF token and user info to all views
 app.use((req, res, next) => {
   res.locals.user = req.session.user;
   res.locals.isAdmin = req.session.user?.role === 'admin';
   
-  // Generate CSRF token for all forms if csrfProtection middleware is used
+  // Add CSRF token to all views
   if (req.csrfToken) {
     res.locals.csrfToken = req.csrfToken();
   }
@@ -63,14 +76,15 @@ app.use('/', authRoutes);
 app.use('/', bookingRoutes);
 app.use('/', organiserRoutes);
 
-// Error handling middleware
-app.use((req, res) => {
+// 404 handler
+app.use((req, res, next) => {
   res.status(404).render('error', {
     title: 'Page Not Found',
     message: 'The page you requested could not be found.'
   });
 });
 
+// Global error handler
 app.use((err, req, res, next) => {
   console.error(err.stack);
   
@@ -82,6 +96,7 @@ app.use((err, req, res, next) => {
     });
   }
   
+  // Generic server error
   res.status(500).render('error', {
     title: 'Server Error',
     message: 'Something went wrong on our end.'
@@ -89,6 +104,9 @@ app.use((err, req, res, next) => {
 });
 
 // Server startup
-app.listen(port, () => {
-    console.log(`Server running at http://localhost:${port}`);
+const server = app.listen(port, () => {
+  console.log(`Server running at http://localhost:${port}`);
+  console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
 });
+
+module.exports = server;

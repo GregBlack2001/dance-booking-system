@@ -1,0 +1,2 @@
+{"error":{"isOperational":true,"status":"fail","statusCode":404},"level":"error","message":"FAIL - Course not found","method":"POST","path":"/book/9sIXSlNIZIxsbFp7","timestamp":"2025-04-10T15:56:38.351Z","user":"testing1"}
+{"error":{"isOperational":true,"status":"fail","statusCode":404},"level":"error","message":"FAIL - Course not found","method":"POST","path":"/book/9sIXSlNIZIxsbFp7","timestamp":"2025-04-10T15:56:46.390Z","user":"testing1"}

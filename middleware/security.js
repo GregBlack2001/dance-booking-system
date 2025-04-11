@@ -1,18 +1,30 @@
 const csrf = require('csurf');
 const helmet = require('helmet');
 const xss = require('xss');
-const { check, validationResult } = require('express-validator');
+const rateLimit = require('express-rate-limit');
+const { body, validationResult } = require('express-validator');
 
-// Initialize CSRF protection
-const csrfProtection = csrf({ cookie: true });
+// Rate limiting configuration
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // Limit each IP to 100 requests per windowMs
+  message: 'Too many requests from this IP, please try again later',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
-// Sanitize middleware for XSS protection
+// Enhanced XSS sanitization middleware
 const sanitizeInputs = (req, res, next) => {
   // Sanitize request body fields
   if (req.body) {
     Object.keys(req.body).forEach(key => {
       if (typeof req.body[key] === 'string') {
-        req.body[key] = xss(req.body[key].trim());
+        // More comprehensive XSS sanitization
+        req.body[key] = xss(req.body[key].trim(), {
+          whiteList: [], // Strip all HTML tags
+          stripIgnoreTag: true,
+          stripIgnoreTagBody: ['script']
+        });
       }
     });
   }
@@ -29,159 +41,178 @@ const sanitizeInputs = (req, res, next) => {
   next();
 };
 
-// Validation for registration
+// Enhanced Helmet configuration
+const enhancedHelmet = () => helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: [
+        "'self'", 
+        "'unsafe-inline'", 
+        'https://cdn.jsdelivr.net/', 
+        'https://cdnjs.cloudflare.com/',
+        'https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js',
+        'https://cdnjs.cloudflare.com/ajax/libs/mdb-ui-kit/6.4.2/mdb.min.js'
+      ],
+      styleSrc: [
+        "'self'", 
+        "'unsafe-inline'", 
+        'https://cdn.jsdelivr.net/', 
+        'https://cdnjs.cloudflare.com/',
+        'https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css',
+        'https://cdnjs.cloudflare.com/ajax/libs/mdb-ui-kit/6.4.2/mdb.min.css',
+        'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css'
+      ],
+      fontSrc: [
+        "'self'", 
+        'https://cdnjs.cloudflare.com/',
+        'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/webfonts/'
+      ],
+      imgSrc: ["'self'", "data:", "https:"],
+      connectSrc: ["'self'"]
+    }
+  },
+  referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
+  frameguard: { action: 'deny' }, // Prevent clickjacking
+  hidePoweredBy: true // Remove X-Powered-By header
+});
+
+// Comprehensive input validation for registration
 const validateRegistration = [
-  check('name')
+  body('name')
     .trim()
-    .not().isEmpty().withMessage('Name is required')
-    .isLength({ min: 2, max: 50 }).withMessage('Name must be between 2 and 50 characters'),
+    .isLength({ min: 2, max: 50 }).withMessage('Name must be 2-50 characters')
+    .matches(/^[a-zA-Z\s]+$/).withMessage('Name can only contain letters')
+    .escape(), // Prevent XSS
   
-  check('email')
+  body('email')
     .trim()
-    .isEmail().withMessage('Please provide a valid email')
-    .normalizeEmail(),
+    .isEmail().withMessage('Invalid email address')
+    .normalizeEmail({
+      gmail_remove_dots: false,
+      gmail_remove_subaddress: false
+    }),
   
-  check('username')
+  body('username')
     .trim()
-    .not().isEmpty().withMessage('Username is required')
-    .isAlphanumeric().withMessage('Username can only contain letters and numbers')
-    .isLength({ min: 3, max: 20 }).withMessage('Username must be between 3 and 20 characters'),
+    .isLength({ min: 3, max: 20 }).withMessage('Username must be 3-20 characters')
+    .isAlphanumeric().withMessage('Username must be alphanumeric')
+    .toLowerCase(), // Normalize username
   
-  check('password')
-    .trim()
-    .isLength({ min: 8 }).withMessage('Password must be at least 8 characters long')
-    .matches(/[a-z]/).withMessage('Password must contain at least one lowercase letter')
-    .matches(/[A-Z]/).withMessage('Password must contain at least one uppercase letter')
-    .matches(/[0-9]/).withMessage('Password must contain at least one number')
-    .matches(/[!@#$%^&*]/).withMessage('Password must contain at least one special character')
+  body('password')
+    .isLength({ min: 8 }).withMessage('Password must be at least 8 characters')
+    .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/)
+    .withMessage('Password must include uppercase, lowercase, number, and special character')
 ];
 
-// Validation for login
+// Validation for login with additional security
 const validateLogin = [
-  check('username')
+  body('username')
     .trim()
-    .not().isEmpty().withMessage('Username is required'),
+    .isLength({ min: 3, max: 20 }).withMessage('Invalid username')
+    .isAlphanumeric().withMessage('Username must be alphanumeric')
+    .toLowerCase(),
   
-  check('password')
-    .not().isEmpty().withMessage('Password is required')
+  body('password')
+    .isLength({ min: 8 }).withMessage('Invalid password')
 ];
 
-// Course validation
+// Course validation with enhanced checks
 const validateCourse = [
-  check('title')
+  body('title')
     .trim()
-    .not().isEmpty().withMessage('Title is required')
-    .isLength({ min: 3, max: 100 }).withMessage('Title must be between 3 and 100 characters'),
+    .isLength({ min: 3, max: 100 }).withMessage('Title must be 3-100 characters')
+    .escape(), // Prevent XSS
   
-  check('instructor')
+  body('instructor')
     .trim()
-    .not().isEmpty().withMessage('Instructor name is required'),
+    .isLength({ min: 2, max: 50 }).withMessage('Instructor name required')
+    .matches(/^[a-zA-Z\s]+$/).withMessage('Instructor name can only contain letters')
+    .escape(),
   
-  check('date')
+  body('date')
     .trim()
-    .not().isEmpty().withMessage('Date is required')
-    .isISO8601().withMessage('Please provide a valid date'),
+    .isISO8601().withMessage('Invalid date format')
+    .toDate(), // Convert to date object
   
-  check('description')
+  body('description')
     .trim()
-    .not().isEmpty().withMessage('Description is required'),
+    .isLength({ min: 10, max: 500 }).withMessage('Description must be 10-500 characters')
+    .escape(),
   
-  check('price')
-    .isFloat({ min: 0 }).withMessage('Price must be a positive number'),
+  body('price')
+    .isFloat({ min: 0, max: 1000 }).withMessage('Price must be between 0 and 1000')
+    .toFloat(),
   
-  check('capacity')
-    .optional({ nullable: true })
-    .isInt({ min: 1 }).withMessage('Capacity must be a positive number')
+  body('capacity')
+    .optional({ checkFalsy: true })
+    .isInt({ min: 1, max: 50 }).withMessage('Capacity must be between 1 and 50')
+    .toInt()
 ];
 
-// Booking validation
-const validateBooking = [
-  check('name')
-    .trim()
-    .not().isEmpty().withMessage('Name is required'),
-  
-  check('email')
-    .trim()
-    .isEmail().withMessage('Please provide a valid email')
-    .normalizeEmail()
-];
-
-// Password reset validation
-const validatePasswordReset = [
-  check('email')
-    .trim()
-    .isEmail().withMessage('Please provide a valid email')
-    .normalizeEmail()
-];
-
-// New password validation
-const validateNewPassword = [
-  check('password')
-    .trim()
-    .isLength({ min: 8 }).withMessage('Password must be at least 8 characters long')
-    .matches(/[a-z]/).withMessage('Password must contain at least one lowercase letter')
-    .matches(/[A-Z]/).withMessage('Password must contain at least one uppercase letter')
-    .matches(/[0-9]/).withMessage('Password must contain at least one number')
-    .matches(/[!@#$%^&*]/).withMessage('Password must contain at least one special character'),
-  
-  check('confirmPassword')
-    .custom((value, { req }) => {
-      if (value !== req.body.password) {
-        throw new Error('Password confirmation does not match password');
-      }
-      return true;
-    })
-];
-
-// Process validation errors
+// Process validation errors with detailed handling
 const processValidationErrors = (req, res, next) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
-    // Get the first error message
     const errorMsg = errors.array()[0].msg;
     
-    // If this is an AJAX request
+    // Differentiated error handling for different request types
     if (req.xhr) {
       return res.status(400).json({ error: errorMsg });
     }
     
-    // For regular form submissions - store in flash and redirect back
-    // We'll set a local variable that can be accessed in the template
-    res.locals.error = errorMsg;
-    
-    // Different redirects based on the route
-    if (req.originalUrl.includes('/register')) {
-      return res.render('register', { error: errorMsg });
-    } else if (req.originalUrl.includes('/login')) {
-      return res.render('login', { error: errorMsg });
-    } else if (req.originalUrl.includes('/reset-password')) {
-      return res.render('reset-password', { error: errorMsg });
-    } else if (req.originalUrl.includes('/courses/add') || req.originalUrl.includes('/courses/edit')) {
-      return res.render(req.originalUrl.includes('/add') ? 'add-course' : 'edit-course', { 
+    // Context-aware error rendering
+    const renderErrorMap = {
+      '/register': 'register',
+      '/login': 'login',
+      '/reset-password': 'reset-password',
+      '/courses/add': 'add-course',
+      '/courses/edit': 'edit-course'
+    };
+
+    const matchedRoute = Object.keys(renderErrorMap).find(route => 
+      req.originalUrl.includes(route)
+    );
+
+    if (matchedRoute) {
+      return res.status(400).render(renderErrorMap[matchedRoute], { 
         error: errorMsg,
-        course: req.body
+        ...(req.body && { course: req.body }) 
       });
-    } else if (req.originalUrl.includes('/book/')) {
-      // For booking form
-      const courseId = req.params.id;
-      return res.redirect(`/book/${courseId}`);
-    } else {
-      // General fallback
-      return res.redirect('back');
     }
+
+    // Fallback error handling
+    return res.status(400).redirect('back');
   }
   next();
 };
 
 module.exports = {
-  helmet,
-  csrfProtection,
+  limiter,
+  csrfProtection: csrf({ cookie: true }),
+  helmet: enhancedHelmet,
   sanitizeInputs,
   validateRegistration,
   validateLogin,
   validateCourse,
-  validateBooking,
-  validatePasswordReset,
-  validateNewPassword,
+  validateBooking: [
+    body('name').trim().isLength({ min: 2 }).withMessage('Name is required').escape(),
+    body('email').trim().isEmail().withMessage('Invalid email').normalizeEmail()
+  ],
+  validatePasswordReset: [
+    body('email').trim().isEmail().withMessage('Invalid email').normalizeEmail()
+  ],
+  validateNewPassword: [
+    body('password')
+      .isLength({ min: 8 }).withMessage('Password must be at least 8 characters')
+      .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/)
+      .withMessage('Password must include uppercase, lowercase, number, and special character'),
+    body('confirmPassword').custom((value, { req }) => {
+      if (value !== req.body.password) {
+        throw new Error('Passwords do not match');
+      }
+      return true;
+    })
+  ],
   processValidationErrors
 };

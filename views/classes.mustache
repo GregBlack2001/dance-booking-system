@@ -92,21 +92,86 @@
     });
 
     document.getElementById('confirmBookingBtn').addEventListener('click', function () {
-      fetch(`/book/${selectedCourseId}`, { method: 'POST' })
-        .then(response => {
-          if (!response.ok) throw new Error('Booking failed');
-          return response.text();
-        })
-        .then(() => {
-          alert('Booking confirmed!');
-          location.reload();
-        })
-        .catch(() => {
-          alert('There was a problem with your booking.');
-        });
+      fetch(`/book/${selectedCourseId}`, { 
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        }
+      })
+      .then(response => {
+        // Check if the response is JSON
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          return response.json().then(data => {
+            if (!response.ok) {
+              // Throw an error with the message from the server
+              throw new Error(data.error || 'Booking failed');
+            }
+            return data;
+          });
+        }
+        
+        // If not JSON, treat as text
+        if (!response.ok) {
+          throw new Error('Booking failed');
+        }
+        return response.text();
+      })
+      .then((data) => {
+        // Success handling
+        const message = typeof data === 'object' 
+          ? data.message 
+          : 'Booking confirmed!';
+        
+        // Use Bootstrap toast or custom alert
+        const toastContainer = document.createElement('div');
+        toastContainer.innerHTML = `
+          <div class="toast-container position-fixed bottom-0 end-0 p-3">
+            <div class="toast show" role="alert" aria-live="assertive" aria-atomic="true">
+              <div class="toast-header bg-success text-white">
+                <strong class="me-auto">Booking Successful</strong>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast" aria-label="Close"></button>
+              </div>
+              <div class="toast-body">
+                ${message}
+              </div>
+            </div>
+          </div>
+        `;
+        document.body.appendChild(toastContainer);
+
+        // Reload after a short delay
+        setTimeout(() => location.reload(), 2000);
+      })
+      .catch((error) => {
+        // Error handling with specific messages
+        console.error('Booking error:', error);
+        
+        // Create error toast
+        const toastContainer = document.createElement('div');
+        toastContainer.innerHTML = `
+          <div class="toast-container position-fixed bottom-0 end-0 p-3">
+            <div class="toast show bg-danger text-white" role="alert" aria-live="assertive" aria-atomic="true">
+              <div class="toast-header bg-danger text-white">
+                <strong class="me-auto">Booking Error</strong>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast" aria-label="Close"></button>
+              </div>
+              <div class="toast-body">
+                ${error.message || 'There was a problem with your booking.'}
+              </div>
+            </div>
+          </div>
+        `;
+        document.body.appendChild(toastContainer);
+
+        // Auto-remove toast after 5 seconds
+        setTimeout(() => {
+          const toast = document.querySelector('.toast-container');
+          if (toast) toast.remove();
+        }, 5000);
+      });
     });
   </script>
 </body>
 </html>
-
-
