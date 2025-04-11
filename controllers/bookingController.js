@@ -35,13 +35,15 @@ exports.bookingForm = catchAsync(async (req, res, next) => {
     res.render('book-course', { 
         course,
         spotsLeft: availabilityResult.spotsLeft || 'Unlimited',
-        error: availabilityResult.isAvailable ? null : 'This course is fully booked.'
+        error: availabilityResult.isAvailable ? null : 'This course is fully booked.',
+        csrfToken: req.csrfToken()
     });
 });
 
 // Handle booking (both logged-in and public)
 exports.bookCourse = catchAsync(async (req, res, next) => {
     const courseId = req.params.id;
+    console.log('Attempting to book course:', courseId); // Add debugging
 
     // Find course
     const course = await new Promise((resolve, reject) => {
@@ -51,7 +53,12 @@ exports.bookCourse = catchAsync(async (req, res, next) => {
         });
     });
 
+    console.log('Found course:', course); // Add debugging
+
     if (!course) {
+        if (req.xhr) {
+            return res.status(404).json({ error: 'Course not found' });
+        }
         return next(new NotFoundError('Course'));
     }
 
@@ -64,14 +71,14 @@ exports.bookCourse = catchAsync(async (req, res, next) => {
     });
 
     if (!availabilityResult.isAvailable) {
-        // Course is fully booked
         if (req.xhr) {
             return res.status(409).json({ error: 'This course is fully booked' });
         }
         return res.render('book-course', { 
             course,
             error: 'This course is fully booked.',
-            spotsLeft: 0
+            spotsLeft: 0,
+            csrfToken: req.csrfToken()
         });
     }
 
@@ -89,20 +96,6 @@ exports.bookCourse = catchAsync(async (req, res, next) => {
             courseId
         };
 
-    // Validate input for public bookings
-    if (!req.session.user) {
-        if (!bookingData.name || !bookingData.email) {
-            if (req.xhr) {
-                return res.status(400).json({ error: 'Name and email are required' });
-            }
-            return res.render('book-course', {
-                course,
-                error: 'Name and email are required.',
-                spotsLeft: availabilityResult.spotsLeft || 'Unlimited'
-            });
-        }
-    }
-
     // Check for duplicate booking
     const duplicateBooking = await new Promise((resolve, reject) => {
         const query = req.session.user 
@@ -115,20 +108,15 @@ exports.bookCourse = catchAsync(async (req, res, next) => {
         });
     });
 
-    // Handle duplicate booking
     if (duplicateBooking) {
         if (req.xhr) {
-            // For AJAX requests
-            return res.status(409).json({ 
-                error: 'You have already booked this course' 
-            });
+            return res.status(409).json({ error: 'You have already booked this course' });
         }
-        
-        // For form submissions
         return res.render('book-course', {
             course,
             error: 'You have already booked this course',
-            spotsLeft: availabilityResult.spotsLeft || 'Unlimited'
+            spotsLeft: availabilityResult.spotsLeft || 'Unlimited',
+            csrfToken: req.csrfToken()
         });
     }
 
@@ -141,18 +129,19 @@ exports.bookCourse = catchAsync(async (req, res, next) => {
             });
         });
     } catch (error) {
-        // Handle booking creation error
+        console.error('Booking creation error:', error);
         if (req.xhr) {
             return res.status(500).json({ error: 'Failed to create booking' });
         }
         return res.render('book-course', {
             course,
             error: 'Failed to create booking. Please try again.',
-            spotsLeft: availabilityResult.spotsLeft || 'Unlimited'
+            spotsLeft: availabilityResult.spotsLeft || 'Unlimited',
+            csrfToken: req.csrfToken()
         });
     }
 
-    // Successful booking response
+    // Success response
     if (req.xhr) {
         return res.status(200).json({ message: "Booking successful" });
     }
@@ -196,7 +185,8 @@ exports.getMyBookings = catchAsync(async (req, res, next) => {
 
     res.render('my-bookings', {
         title: 'My Bookings',
-        bookings: enrichedBookings
+        bookings: enrichedBookings,
+        csrfToken: req.csrfToken()
     });
 });
 
@@ -274,7 +264,8 @@ exports.getAllBookings = catchAsync(async (req, res, next) => {
 
     res.render('admin-bookings', {
         title: 'All Bookings',
-        bookings: enrichedBookings
+        bookings: enrichedBookings,
+        csrfToken: req.csrfToken()
     });
 });
 

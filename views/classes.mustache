@@ -9,6 +9,9 @@
 
   {{> navbar}}
 
+  <!-- Hidden CSRF token -->
+  <input type="hidden" id="csrfToken" value="{{csrfToken}}">
+  
   <div class="container py-5">
     <h1 class="mb-4 text-center">{{title}}</h1>
 
@@ -33,16 +36,24 @@
                 {{/user}}
 
                 {{#user}}
+                  <!-- Add debugging output -->
+                  <div style="display: none;">Course ID for {{title}}: {{_id}}</div>
+                  
                   <!-- Logged in: use modal -->
-                  <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#confirmModal"
-                          data-course-id="{{_id}}" data-course-title="{{title}}">
-                    Book
+                  <button class="btn btn-outline-primary" 
+                          onclick="console.log('Booking course ID:', '{{_id}}')"
+                          data-bs-toggle="modal" 
+                          data-bs-target="#confirmModal"
+                          data-course-id="{{_id}}" 
+                          data-course-title="{{title}}">
+                    Book Course
                   </button>
                 {{/user}}
 
                 {{#isAdmin}}
                   <a href="/courses/edit/{{_id}}" class="btn btn-sm btn-outline-secondary ms-2">Edit</a>
                   <form method="POST" action="/courses/delete/{{_id}}" class="d-inline">
+                    <input type="hidden" name="_csrf" value="{{csrfToken}}">
                     <button class="btn btn-sm btn-outline-danger ms-1" type="submit">Delete</button>
                   </form>
                   <a href="/participants/{{_id}}" class="btn btn-sm btn-outline-info ms-2">Participants</a>
@@ -88,43 +99,46 @@
       selectedCourseId = button.getAttribute('data-course-id');
       const courseTitle = button.getAttribute('data-course-title');
 
+      // Add debugging
+      console.log('Selected course ID:', selectedCourseId);
+      console.log('Selected course title:', courseTitle);
+
       document.getElementById('modalCourseTitle').textContent = courseTitle;
     });
 
     document.getElementById('confirmBookingBtn').addEventListener('click', function () {
+      const csrfToken = document.getElementById('csrfToken').value;
+      
+      // Add debugging
+      console.log('Making booking request for course:', selectedCourseId);
+      console.log('Using CSRF token:', csrfToken);
+
       fetch(`/book/${selectedCourseId}`, { 
         method: 'POST',
         headers: {
           'Accept': 'application/json',
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'CSRF-Token': csrfToken
         }
       })
       .then(response => {
-        // Check if the response is JSON
         const contentType = response.headers.get('content-type');
         if (contentType && contentType.includes('application/json')) {
           return response.json().then(data => {
             if (!response.ok) {
-              // Throw an error with the message from the server
               throw new Error(data.error || 'Booking failed');
             }
             return data;
           });
         }
-        
-        // If not JSON, treat as text
         if (!response.ok) {
           throw new Error('Booking failed');
         }
         return response.text();
       })
       .then((data) => {
-        // Success handling
-        const message = typeof data === 'object' 
-          ? data.message 
-          : 'Booking confirmed!';
+        const message = typeof data === 'object' ? data.message : 'Booking confirmed!';
         
-        // Use Bootstrap toast or custom alert
         const toastContainer = document.createElement('div');
         toastContainer.innerHTML = `
           <div class="toast-container position-fixed bottom-0 end-0 p-3">
@@ -133,22 +147,17 @@
                 <strong class="me-auto">Booking Successful</strong>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast" aria-label="Close"></button>
               </div>
-              <div class="toast-body">
-                ${message}
-              </div>
+              <div class="toast-body">${message}</div>
             </div>
           </div>
         `;
         document.body.appendChild(toastContainer);
 
-        // Reload after a short delay
         setTimeout(() => location.reload(), 2000);
       })
       .catch((error) => {
-        // Error handling with specific messages
         console.error('Booking error:', error);
         
-        // Create error toast
         const toastContainer = document.createElement('div');
         toastContainer.innerHTML = `
           <div class="toast-container position-fixed bottom-0 end-0 p-3">
@@ -165,7 +174,6 @@
         `;
         document.body.appendChild(toastContainer);
 
-        // Auto-remove toast after 5 seconds
         setTimeout(() => {
           const toast = document.querySelector('.toast-container');
           if (toast) toast.remove();
