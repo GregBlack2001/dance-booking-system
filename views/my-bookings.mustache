@@ -11,15 +11,32 @@
 
   <div class="container py-5">
     <h1 class="mb-4 text-center">{{title}}</h1>
+    
+    {{#successMessage}}
+      <div class="alert alert-success alert-dismissible fade show" role="alert">
+        {{successMessage}}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+      </div>
+    {{/successMessage}}
 
     {{#bookings.length}}
       <div class="list-group">
         {{#bookings}}
           <div class="list-group-item">
-            <h5 class="mb-1">{{course.title}}</h5>
-            <p class="mb-1"><strong>Date:</strong> {{course.date}}</p>
-            <p class="mb-1"><strong>Location:</strong> {{course.location}}</p>
-            <small class="text-muted">Booked as: {{name}}</small>
+            <div class="d-flex justify-content-between align-items-center">
+              <div>
+                <h5 class="mb-1">{{course.title}}</h5>
+                <p class="mb-1"><strong>Date:</strong> {{course.date}}</p>
+                <p class="mb-1"><strong>Location:</strong> {{course.location}}</p>
+                <small class="text-muted">Booked as: {{name}}</small>
+              </div>
+              <div>
+                <form method="POST" action="/booking/{{_id}}/cancel" onsubmit="return confirm('Are you sure you want to cancel this booking?');">
+                  <input type="hidden" name="_csrf" value="{{csrfToken}}">
+                  <button type="submit" class="btn btn-danger">Cancel Booking</button>
+                </form>
+              </div>
+            </div>
           </div>
         {{/bookings}}
       </div>
@@ -31,5 +48,21 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // Auto-dismiss alerts after 5 seconds
+      setTimeout(function() {
+        const alerts = document.querySelectorAll('.alert');
+        alerts.forEach(alert => {
+          const bsAlert = new bootstrap.Alert(alert);
+          bsAlert.close();
+        });
+      }, 5000);
+      
+      // Optional: Add JavaScript for AJAX-based cancellation
+      // This is an enhancement that could be implemented in the future
+      // for a smoother user experience without page reload
+    });
+  </script>
 </body>
 </html>

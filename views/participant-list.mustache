@@ -1,18 +1,387 @@
-<h2 class="mb-4">Participants for {{course.title}}</h2>
+html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Participants - {{course.title}}</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.2/font/bootstrap-icons.min.css">
+  <link href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css" rel="stylesheet">
+  <style>
+    .participant-card:hover {
+      transform: translateY(-3px);
+      transition: transform 0.3s ease;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    .course-info {
+      background-color: #f8f9fa;
+      border-radius: 8px;
+    }
+    .badge-container .badge {
+      font-size: 0.9rem;
+      margin-right: 5px;
+    }
+    .export-options {
+      transition: all 0.3s ease;
+    }
+    .export-options:hover {
+      transform: translateY(-2px);
+    }
+    .course-header {
+      background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+      color: white;
+      border-radius: 10px;
+      padding: 2rem;
+      margin-bottom: 2rem;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    }
+    .stats-card {
+      transition: all 0.3s ease;
+      border-radius: 10px;
+      border: none;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+    }
+    .stats-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 8px 15px rgba(0,0,0,0.1);
+    }
+    .stats-icon {
+      font-size: 2rem;
+      padding: 15px;
+      border-radius: 50%;
+      margin-bottom: 1rem;
+    }
+    .course-actions {
+      background: white;
+      border-radius: 10px;
+      padding: 1rem;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+    }
+    .table-wrapper {
+      background: white;
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+    }
+    .calendar-filter {
+      border-radius: 5px;
+      border: 1px solid #ced4da;
+      padding: 0.375rem 0.75rem;
+    }
+    .avatar-container {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      color: white;
+      font-weight: bold;
+      margin-right: 10px;
+    }
+    .empty-state {
+      padding: 4rem 2rem;
+      text-align: center;
+    }
+    .empty-state-icon {
+      font-size: 4rem;
+      color: #dee2e6;
+      margin-bottom: 1rem;
+    }
+  </style>
+</head>
+<body class="bg-light">
 
-{{#bookings.length}}
-  <ul class="list-group mb-3">
-    {{#bookings}}
-      <li class="list-group-item">
-        {{name}} ({{email}})
-        {{#username}} - username: {{username}}{{/username}}
-      </li>
-    {{/bookings}}
-  </ul>
-{{/bookings.length}}
+  {{> navbar}}
 
-{{^bookings.length}}
-  <div class="alert alert-info">No bookings yet for this course.</div>
-{{/bookings.length}}
+  <div class="container py-5">
+    <!-- Course Header -->
+    <div class="course-header">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h1 class="mb-0 fw-bold">
+          <i class="bi bi-people-fill me-2"></i>
+          Participants
+        </h1>
+        <nav aria-label="breadcrumb">
+          <ol class="breadcrumb mb-0 bg-transparent">
+            <li class="breadcrumb-item"><a href="/courses/admin" class="text-white opacity-75">Dashboard</a></li>
+            <li class="breadcrumb-item text-white">Participants</li>
+          </ol>
+        </nav>
+      </div>
+      <h2 class="fs-4 mb-0 text-white opacity-75">{{course.title}}</h2>
+    </div>
 
-<a href="/courses" class="btn btn-secondary">Back to Courses</a>
+    <!-- Stats Cards -->
+    <div class="row mb-4">
+      <div class="col-md-4 mb-3">
+        <div class="stats-card card h-100 bg-white p-4">
+          <div class="text-center">
+            <div class="stats-icon bg-primary bg-opacity-10 text-primary mx-auto">
+              <i class="bi bi-calendar-event"></i>
+            </div>
+            <h3 class="fs-5">Course Date</h3>
+            <p class="fs-4 fw-bold mb-0">{{course.date}}</p>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4 mb-3">
+        <div class="stats-card card h-100 bg-white p-4">
+          <div class="text-center">
+            <div class="stats-icon bg-success bg-opacity-10 text-success mx-auto">
+              <i class="bi bi-person-check"></i>
+            </div>
+            <h3 class="fs-5">Participants</h3>
+            <p class="fs-4 fw-bold mb-0">
+              {{#course.capacity}}
+                <span class="{{#isAtCapacity}}text-danger{{/isAtCapacity}}">{{bookings.length}}/{{course.capacity}}</span>
+              {{/course.capacity}}
+              {{^course.capacity}}
+                {{bookings.length}}
+              {{/course.capacity}}
+            </p>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4 mb-3">
+        <div class="stats-card card h-100 bg-white p-4">
+          <div class="text-center">
+            <div class="stats-icon bg-info bg-opacity-10 text-info mx-auto">
+              <i class="bi bi-geo-alt"></i>
+            </div>
+            <h3 class="fs-5">Location</h3>
+            <p class="fs-4 fw-bold mb-0">{{course.location}}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Search and Filter -->
+    <div class="course-actions mb-4">
+      <div class="row g-3 align-items-center">
+        <div class="col-md-5">
+          <div class="input-group">
+            <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
+            <input type="text" id="participantSearch" class="form-control border-start-0" placeholder="Search participants...">
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="input-group">
+            <span class="input-group-text bg-white"><i class="bi bi-calendar3"></i></span>
+            <input type="text" id="bookingDateFilter" class="form-control calendar-filter border-start-0" placeholder="Filter by booking date">
+          </div>
+        </div>
+        <div class="col-md-3 text-md-end">
+          <a href="/courses/class-list/{{course._id}}" class="btn btn-primary w-100">
+            <i class="bi bi-file-earmark-text me-1"></i> Generate Report
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Participant List -->
+    {{#bookings.length}}
+      <div class="table-wrapper">
+        <table class="table table-hover align-middle mb-0" id="participantsTable">
+          <thead class="table-light">
+            <tr>
+              <th>#</th>
+              <th>Name</th>
+              <th>Email</th>
+              <th>Booking Date</th>
+              <th class="text-end">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {{#bookings}}
+              <tr class="participant-row" data-booking-date="{{formattedBookingDate}}">
+                <td>{{@index}}</td>
+                <td>
+                  <div class="d-flex align-items-center">
+                    <div class="avatar-container bg-primary" style="background-color: {{avatarColor}};">
+                      {{firstInitial}}
+                    </div>
+                    <div>
+                      <p class="fw-semibold mb-0">{{name}}</p>
+                      {{#username}}<small class="text-muted">@{{username}}</small>{{/username}}
+                    </div>
+                  </div>
+                </td>
+                <td>{{email}}</td>
+                <td>{{formattedBookingDate}}</td>
+                <td class="text-end">
+                  <div class="btn-group">
+                    <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#participantModal" data-participant-name="{{name}}" data-participant-email="{{email}}">
+                      <i class="bi bi-eye"></i> Details
+                    </button>
+                    <form method="POST" action="/booking/{{_id}}/cancel" class="d-inline" onsubmit="return confirm('Are you sure you want to cancel this booking?');">
+                      <input type="hidden" name="_csrf" value="{{csrfToken}}">
+                      <button type="submit" class="btn btn-sm btn-outline-danger ms-2" data-bs-toggle="tooltip" title="Cancel Booking">
+                        <i class="bi bi-x-circle"></i> Cancel
+                      </button>
+                    </form>
+                  </div>
+                </td>
+              </tr>
+            {{/bookings}}
+          </tbody>
+        </table>
+      </div>
+      <div id="noMatchesMessage" class="alert alert-info mt-3 d-none">
+        No participants match your current filters. Try adjusting your search criteria.
+      </div>
+    {{/bookings.length}}
+
+    {{^bookings.length}}
+      <div class="card shadow-sm">
+        <div class="empty-state">
+          <i class="bi bi-people empty-state-icon"></i>
+          <h3 class="mt-3">No Participants Yet</h3>
+          <p class="text-muted mb-4">There are no bookings for this course at the moment.</p>
+          <a href="/courses" class="btn btn-primary">Return to Courses</a>
+        </div>
+      </div>
+    {{/bookings.length}}
+  </div>
+
+  <!-- Participant Details Modal -->
+  <div class="modal fade" id="participantModal" tabindex="-1" aria-labelledby="participantModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="participantModalLabel">Participant Details</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="text-center mb-3">
+            <div id="modalAvatar" class="avatar-container bg-primary mx-auto mb-3" style="width: 80px; height: 80px; font-size: 2rem;">
+              <span id="modalInitial"></span>
+            </div>
+            <h5 id="modalName" class="mb-0"></h5>
+            <p id="modalEmail" class="text-muted"></p>
+          </div>
+          <hr>
+          <h6>Course Information</h6>
+          <p class="text-muted small">View details about this participant's booking.</p>
+          <div class="card bg-light">
+            <div class="card-body">
+              <p class="mb-1"><strong>Course:</strong> {{course.title}}</p>
+              <p class="mb-1"><strong>Date:</strong> {{course.date}}</p>
+              <p class="mb-1"><strong>Location:</strong> {{course.location}}</p>
+              <p class="mb-0"><strong>Instructor:</strong> {{course.instructor}}</p>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // Initialize tooltips
+      const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+      tooltipTriggerList.map(function(tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+      });
+      
+      // Initialize date picker
+      flatpickr("#bookingDateFilter", {
+        dateFormat: "d M Y",
+        allowInput: true,
+        altInput: true,
+        altFormat: "F j, Y",
+        onClose: function(selectedDates, dateStr) {
+          filterParticipants();
+        }
+      });
+      
+      // Search and filter functionality
+      const searchInput = document.getElementById('participantSearch');
+      const dateFilter = document.getElementById('bookingDateFilter');
+      const rows = document.querySelectorAll('.participant-row');
+      const noMatchesMessage = document.getElementById('noMatchesMessage');
+      
+      function filterParticipants() {
+        const searchTerm = searchInput.value.toLowerCase();
+        const dateStr = dateFilter.value;
+        
+        let visibleCount = 0;
+        
+        rows.forEach(row => {
+          const name = row.querySelector('td:nth-child(2)').textContent.toLowerCase();
+          const email = row.querySelector('td:nth-child(3)').textContent.toLowerCase();
+          const bookingDate = row.getAttribute('data-booking-date');
+          
+          // Check if row matches search term
+          const matchesSearch = name.includes(searchTerm) || email.includes(searchTerm);
+          
+          // Check if row matches date filter
+          const matchesDate = !dateStr || (bookingDate && bookingDate.includes(dateStr));
+          
+          if (matchesSearch && matchesDate) {
+            row.style.display = '';
+            visibleCount++;
+          } else {
+            row.style.display = 'none';
+          }
+        });
+        
+        // Show/hide no matches message
+        if (visibleCount === 0 && (searchTerm || dateStr)) {
+          noMatchesMessage.classList.remove('d-none');
+        } else {
+          noMatchesMessage.classList.add('d-none');
+        }
+      }
+      
+      // Add event listeners
+      if (searchInput) {
+        searchInput.addEventListener('keyup', filterParticipants);
+      }
+      
+      // Modal data population
+      const participantModal = document.getElementById('participantModal');
+      if (participantModal) {
+        participantModal.addEventListener('show.bs.modal', function(event) {
+          const button = event.relatedTarget;
+          const name = button.getAttribute('data-participant-name');
+          const email = button.getAttribute('data-participant-email');
+          
+          const modalName = document.getElementById('modalName');
+          const modalEmail = document.getElementById('modalEmail');
+          const modalInitial = document.getElementById('modalInitial');
+          const modalAvatar = document.getElementById('modalAvatar');
+          
+          if (modalName) modalName.textContent = name;
+          if (modalEmail) modalEmail.textContent = email;
+          if (modalInitial) modalInitial.textContent = name.charAt(0).toUpperCase();
+          
+          // Generate a random color for the avatar
+          if (modalAvatar) {
+            const colors = [
+              '#4361ee', '#3a0ca3', '#7209b7', '#f72585', '#4cc9f0',
+              '#4895ef', '#560bad', '#f15bb5', '#fee440', '#00bbf9'
+            ];
+            const colorIndex = name.charCodeAt(0) % colors.length;
+            modalAvatar.style.backgroundColor = colors[colorIndex];
+          }
+        });
+      }
+      
+      // Print functionality for the print button
+      const printButton = document.querySelector('.print-button');
+      if (printButton) {
+        printButton.addEventListener('click', function(e) {
+          e.preventDefault();
+          window.print();
+        });
+      }
+    });
+  </script>
+</body>
+</html>

@@ -110,8 +110,13 @@ exports.bookCourse = catchAsync(async (req, res, next) => {
 
     if (duplicateBooking) {
         if (req.xhr) {
-            return res.status(409).json({ error: 'You have already booked this course' });
+            // For AJAX requests (logged-in users using modal), return clear error
+            return res.status(409).json({ 
+                error: 'You have already booked this course',
+                isDuplicate: true 
+            });
         }
+        // For form submissions (non-logged in users)
         return res.render('book-course', {
             course,
             error: 'You have already booked this course',
@@ -183,9 +188,14 @@ exports.getMyBookings = catchAsync(async (req, res, next) => {
         });
     }));
 
+    // Get any success message from the session and clear it
+    const successMessage = req.session.successMessage;
+    delete req.session.successMessage;
+
     res.render('my-bookings', {
         title: 'My Bookings',
         bookings: enrichedBookings,
+        successMessage: successMessage,
         csrfToken: req.csrfToken()
     });
 });
@@ -230,6 +240,9 @@ exports.cancelBooking = catchAsync(async (req, res, next) => {
         return res.status(200).json({ message: "Booking cancelled" });
     }
 
+    // Add a success message to the session
+    req.session.successMessage = "Your booking has been successfully cancelled.";
+    
     res.redirect('/my-bookings');
 });
 

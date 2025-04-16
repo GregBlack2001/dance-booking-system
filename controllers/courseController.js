@@ -160,9 +160,48 @@ exports.showParticipants = (req, res) => {
     bookingModel.getBookingsByCourse(courseId, (err, bookings) => {
       if (err) return res.status(500).send("Error retrieving bookings");
       
+      // List of avatar colors
+      const avatarColors = [
+        '#4361ee', '#3a0ca3', '#7209b7', '#f72585', '#4cc9f0',
+        '#4895ef', '#560bad', '#f15bb5', '#fee440', '#00bbf9'
+      ];
+      
+      // Enhance bookings with additional data
+      const enhancedBookings = bookings.map(booking => {
+        // Calculate first initial for the avatar
+        const firstInitial = booking.name ? booking.name.charAt(0).toUpperCase() : '?';
+        
+        // Generate consistent avatar color based on name
+        const nameHash = booking.name ? booking.name.charCodeAt(0) % avatarColors.length : 0;
+        const avatarColor = avatarColors[nameHash];
+        
+        // Format booking date
+        const bookingDate = new Date(booking.bookingDate);
+        const formattedBookingDate = bookingDate.toLocaleDateString('en-GB', {
+          day: 'numeric',
+          month: 'short',
+          year: 'numeric'
+        });
+        
+        return {
+          ...booking,
+          firstInitial,
+          avatarColor,
+          formattedBookingDate
+        };
+      });
+      
+      // Check if course is at capacity
+      const isAtCapacity = course.capacity && bookings.length >= course.capacity;
+      
       res.render('participant-list', {
-        course,
-        bookings
+        course: {
+          ...course,
+          isAtCapacity
+        },
+        bookings: enhancedBookings,
+        title: `Participants - ${course.title}`,
+        csrfToken: req.csrfToken()
       });
     });
   });

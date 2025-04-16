@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const courseController = require('../controllers/courseController');
 const { ensureAuthenticated, ensureAdmin } = require('../middleware/auth');
+const { csrfProtection } = require('../middleware/security'); // Add this import
 
 // Courses for authenticated users
 router.get('/', ensureAuthenticated, courseController.showCourses);
@@ -19,8 +20,8 @@ router.get('/admin', ensureAdmin, courseController.adminDashboard);
 // Course search
 router.get('/search', courseController.searchCourses);
 
-// View participants for a course
-router.get('/participants/:id', ensureAdmin, courseController.showParticipants);
+// View participants for a course (corrected with csrfProtection)
+router.get('/participants/:id', ensureAdmin, csrfProtection, courseController.showParticipants);
 
 // Generate class list report
 router.get('/class-list/:id', ensureAdmin, courseController.generateClassList);

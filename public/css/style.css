@@ -4,3 +4,59 @@ body {
     padding: 0;
     text-align: center;
 }
+
+/* Additional CSS to improve filter section */
+.filter-section {
+    background-color: white;
+    border-radius: 4px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,.05);
+  }
+  
+  .filter-section .form-select {
+    flex: 1;
+  }
+  
+  .filter-section .input-group {
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  
+  .filter-section .input-group-text {
+    border-right: none;
+    background-color: white;
+  }
+  
+  .filter-section input.form-control {
+    border-left: none;
+  }
+  
+  .filter-section input.form-control:focus,
+  .filter-section .form-select:focus {
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+    border-color: #86b7fe;
+  }
+  
+  @media (max-width: 992px) {
+    .filter-section .d-flex {
+      justify-content: space-between;
+    }
+    
+    .filter-section .form-select {
+      flex: 1;
+      min-width: calc(33% - 8px);
+    }
+  }
+  
+  @media (max-width: 576px) {
+    .filter-section .d-flex {
+      flex-direction: column;
+      width: 100%;
+    }
+    
+    .filter-section .form-select {
+      width: 100%;
+      margin-bottom: 8px;
+    }
+  }
