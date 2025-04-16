@@ -43,7 +43,7 @@ exports.bookingForm = catchAsync(async (req, res, next) => {
 // Handle booking (both logged-in and public)
 exports.bookCourse = catchAsync(async (req, res, next) => {
     const courseId = req.params.id;
-    console.log('Attempting to book course:', courseId); // Add debugging
+    console.log('Attempting to book course:', courseId);
 
     // Find course
     const course = await new Promise((resolve, reject) => {
@@ -53,7 +53,7 @@ exports.bookCourse = catchAsync(async (req, res, next) => {
         });
     });
 
-    console.log('Found course:', course); // Add debugging
+    console.log('Found course:', course);
 
     if (!course) {
         if (req.xhr) {
@@ -96,26 +96,54 @@ exports.bookCourse = catchAsync(async (req, res, next) => {
             courseId
         };
 
-    // Check for duplicate booking
-    const duplicateBooking = await new Promise((resolve, reject) => {
-        const query = req.session.user 
-            ? { courseId, username: req.session.user.username }
-            : { courseId, email: bookingData.email };
-        
-        bookingModel.checkDuplicateBooking(query, (err, result) => {
-            if (err) reject(err);
-            resolve(result);
-        });
+    console.log('Booking data prepared:', bookingData);
+
+    // Check for duplicate bookings
+const checkDuplicateBooking = (query, callback) => {
+    console.log('Checking for duplicate booking with query:', JSON.stringify(query));
+    
+    // Make sure we have something to search by
+    if (!query || (!query.username && !query.email) || !query.courseId) {
+      console.log('Invalid query for duplicate booking check:', query);
+      return callback(null, false);
+    }
+    
+    // Construct a proper query based on available data
+    const searchQuery = { courseId: query.courseId };
+    
+    if (query.username) {
+      searchQuery.username = query.username;
+    } else if (query.email) {
+      searchQuery.email = query.email;
+    }
+    
+    console.log('Final search query:', JSON.stringify(searchQuery));
+    
+    // Find any matching bookings
+    bookingsDB.findOne(searchQuery, (err, booking) => {
+      if (err) {
+        console.error('Error in duplicate booking check:', err);
+        return callback(err);
+      }
+      
+      console.log('Duplicate booking check result:', booking ? 'Found duplicate' : 'No duplicate found');
+      callback(null, booking);
     });
+  };
 
     if (duplicateBooking) {
+        console.log('Duplicate booking detected!');
+        
         if (req.xhr) {
-            // For AJAX requests (logged-in users using modal), return clear error
+            console.log('Sending XHR duplicate response');
+            // For AJAX requests (logged-in users using modal)
             return res.status(409).json({ 
                 error: 'You have already booked this course',
-                isDuplicate: true 
+                isDuplicate: true
             });
         }
+        
+        console.log('Rendering duplicate error page');
         // For form submissions (non-logged in users)
         return res.render('book-course', {
             course,
@@ -191,7 +219,7 @@ exports.getMyBookings = catchAsync(async (req, res, next) => {
     // Get any success message from the session and clear it
     const successMessage = req.session.successMessage;
     delete req.session.successMessage;
-
+    
     res.render('my-bookings', {
         title: 'My Bookings',
         bookings: enrichedBookings,
@@ -235,14 +263,14 @@ exports.cancelBooking = catchAsync(async (req, res, next) => {
         });
     });
 
+    // Add a success message to the session
+    req.session.successMessage = "Your booking has been successfully cancelled.";
+
     // Send response
     if (req.xhr) {
         return res.status(200).json({ message: "Booking cancelled" });
     }
 
-    // Add a success message to the session
-    req.session.successMessage = "Your booking has been successfully cancelled.";
-    
     res.redirect('/my-bookings');
 });
 

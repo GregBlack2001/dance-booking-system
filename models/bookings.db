@@ -2,3 +2,4 @@
 {"name":"Matt","email":"matt@gmail.com","courseId":"COURSE_001","bookingDate":{"$$date":1744801460654},"_id":"F0HKnKXJe243cXdx"}
 {"name":"Regular User","email":"user@example.com","courseId":"COURSE_001","username":"user1","bookingDate":{"$$date":1744804362656},"_id":"dWkGpJ29QZvQIzgo"}
 {"name":"Regular User","email":"user@example.com","courseId":"COURSE_003","username":"user1","bookingDate":{"$$date":1744831467933},"_id":"hlDkFxNI00bqjm6O"}
+{"name":"Greg Black","email":"gjblack2001@gmail.com","courseId":"COURSE_001","bookingDate":{"$$date":1744835558576},"_id":"zXjcgdydtd1QA5u7"}

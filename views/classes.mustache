@@ -294,6 +294,8 @@
           return;
         }
 
+        console.log('Submitting booking for course:', courseId);
+
         // Make the fetch request with the course ID
         fetch(`/book/${courseId}`, { 
           method: 'POST',
@@ -304,31 +306,49 @@
           }
         })
         .then(response => {
-          const contentType = response.headers.get('content-type');
-          if (contentType && contentType.includes('application/json')) {
-            return response.json().then(data => {
-              if (!response.ok) {
-                // Create an error object with the server's error message
-                const error = new Error(data.error || 'Booking failed');
-                // Add a flag to indicate if this is a duplicate booking
-                error.isDuplicate = data.isDuplicate || false;
+          console.log('Response status:', response.status);
+          
+          return response.json().then(data => {
+            // Always get the JSON data first, regardless of status code
+            console.log('Response data:', data);
+            
+            // Check for 409 status or duplicate flag in the data
+            if (response.status === 409 || (data && data.isDuplicate)) {
+              const error = new Error(data.error || 'You have already booked this course');
+              error.isDuplicate = true;
+              throw error;
+            }
+            
+            // For other error statuses
+            if (!response.ok) {
+              throw new Error(data.error || 'Booking failed');
+            }
+            
+            // Success case
+            return data;
+          }).catch(err => {
+            // Handle JSON parsing errors
+            if (err instanceof SyntaxError) {
+              // If we can't parse JSON but have a 409 status, it's still a duplicate
+              if (response.status === 409) {
+                const error = new Error('You have already booked this course');
+                error.isDuplicate = true;
                 throw error;
               }
-              return data;
-            });
-          }
-          if (!response.ok) {
-            throw new Error('Booking failed');
-          }
-          return { message: 'Booking successful' };
+              throw new Error('Unexpected response from server');
+            }
+            throw err; // Re-throw other errors
+          });
         })
         .then((data) => {
-          const message = typeof data === 'object' ? data.message : 'Booking confirmed!';
+          console.log('Booking successful:', data);
+          
+          const message = typeof data === 'object' && data.message ? data.message : 'Booking confirmed!';
           
           const toastContainer = document.createElement('div');
           toastContainer.innerHTML = `
             <div class="toast-container position-fixed bottom-0 end-0 p-3">
-              <div class="toast show" role="alert" aria-live="assertive" aria-atomic="true">
+              <div class="toast show bg-success text-white" role="alert" aria-live="assertive" aria-atomic="true">
                 <div class="toast-header bg-success text-white">
                   <strong class="me-auto">Booking Successful</strong>
                   <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast" aria-label="Close"></button>
@@ -352,13 +372,13 @@
           
           // Change the styling based on whether it's a duplicate booking or an error
           const headerClass = error.isDuplicate ? 'bg-warning text-dark' : 'bg-danger text-white';
-          const toastClass = error.isDuplicate ? 'toast show bg-warning text-dark' : 'toast show bg-danger text-white';
+          const toastClass = error.isDuplicate ? 'bg-warning text-dark' : 'bg-danger text-white';
           const headerTitle = error.isDuplicate ? 'Booking Notice' : 'Booking Error';
           
           const toastContainer = document.createElement('div');
           toastContainer.innerHTML = `
             <div class="toast-container position-fixed bottom-0 end-0 p-3">
-              <div class="${toastClass}" role="alert" aria-live="assertive" aria-atomic="true">
+              <div class="toast show ${toastClass}" role="alert" aria-live="assertive" aria-atomic="true">
                 <div class="toast-header ${headerClass}">
                   <strong class="me-auto">${headerTitle}</strong>
                   <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
