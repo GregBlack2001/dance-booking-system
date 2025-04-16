@@ -1,3 +1,2 @@
 {"username":"admin1","password":"$2b$10$PSxJ3rfB751EImARYyZWqOOZ2xJDe1EOrdTLvj6RpHewam81HIKcm","name":"Admin User","email":"admin@example.com","role":"admin","_id":"admin1_1744378635042","loginAttempts":0,"lockUntil":null}
 {"username":"user1","password":"$2b$10$PSxJ3rfB751EImARYyZWqOOZ2xJDe1EOrdTLvj6RpHewam81HIKcm","name":"Regular User","email":"user@example.com","role":"user","_id":"user1_1744378635042","loginAttempts":0,"lockUntil":null}
-{"username":"user1","password":"$2b$10$PSxJ3rfB751EImARYyZWqOOZ2xJDe1EOrdTLvj6RpHewam81HIKcm","name":"Regular User","email":"user@example.com","role":"user","_id":"user1_1744378635042","loginAttempts":0,"lockUntil":null}
