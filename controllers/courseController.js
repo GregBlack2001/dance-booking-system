@@ -6,9 +6,12 @@ const userModel = require('../models/userModel');
 exports.showCourses = (req, res) => {
   courseModel.getAllCourses((err, courses) => {
     if (err) return res.status(500).send("Error retrieving courses");
-    res.render('courses', {
+    res.render('classes', {
+      title: 'All Courses',
       courses,
-      isAdmin: req.session.user && req.session.user.role === 'admin'
+      user: req.session.user, // <-- Make sure user is passed
+      isAdmin: req.session.user?.role === 'admin',
+      csrfToken: req.csrfToken() // Optional
     });
   });
 };

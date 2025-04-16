@@ -20,6 +20,9 @@
         {{#courses}}
           <div class="col-md-6 mb-4">
             <div class="card shadow-sm h-100">
+              <!-- Add hidden span with course ID -->
+              <span class="course-id-holder d-none">{{_id}}</span>
+              
               <div class="card-body">
                 <h5 class="card-title">{{title}}</h5>
                 <h6 class="card-subtitle mb-2 text-muted">{{instructor}}</h6>
@@ -31,11 +34,9 @@
                 </ul>
 
                 {{#user}}
-                  <button class="btn btn-outline-primary" 
+                  <button class="btn btn-outline-primary book-btn" 
                           data-bs-toggle="modal" 
-                          data-bs-target="#confirmModal"
-                          data-course-id="{{_id}}" 
-                          data-course-title="{{title}}">
+                          data-bs-target="#confirmModal">
                     Book Course
                   </button>
                 {{/user}}
@@ -74,6 +75,8 @@
         </div>
         <div class="modal-body">
           Are you sure you want to book <strong id="modalCourseTitle"></strong>?
+          <!-- Hidden input to store the course ID -->
+          <input type="hidden" id="modalCourseId" />
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
@@ -86,37 +89,55 @@
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
   <script>
     document.addEventListener('DOMContentLoaded', function() {
-      let selectedCourseId = null;
-
+      // Set up booking buttons correctly
+      document.querySelectorAll('.book-btn').forEach(btn => {
+        const card = btn.closest('.card');
+        const courseId = card.querySelector('.course-id-holder').textContent;
+        const courseTitle = card.querySelector('.card-title').textContent;
+        
+        // Store course data on the button
+        btn.setAttribute('data-course-id', courseId);
+        btn.setAttribute('data-course-title', courseTitle);
+        
+        console.log('Setup button for course:', courseId, courseTitle);
+      });
+      
+      // Modal handling
       const modal = document.getElementById('confirmModal');
+      
       modal.addEventListener('show.bs.modal', function (event) {
         const button = event.relatedTarget;
         
+        // Get the course ID from the button's data attribute
+        const courseId = button.getAttribute('data-course-id');
+        const courseTitle = button.getAttribute('data-course-title');
+        
         // Add extensive logging
         console.log('Modal trigger button:', button);
-        console.log('Button data-course-id:', button.getAttribute('data-course-id'));
-        console.log('Button data-course-title:', button.getAttribute('data-course-title'));
+        console.log('Button data-course-id:', courseId);
+        console.log('Button data-course-title:', courseTitle);
         
-        selectedCourseId = button.getAttribute('data-course-id');
-        const courseTitle = button.getAttribute('data-course-title');
-
-        // Ensure selectedCourseId is a valid course ID
-        if (!selectedCourseId || !selectedCourseId.startsWith('COURSE_')) {
-          console.error('Invalid course ID selected:', selectedCourseId);
-          return;
-        }
-
+        // Store the course ID in the modal
+        document.getElementById('modalCourseId').value = courseId;
         document.getElementById('modalCourseTitle').textContent = courseTitle;
       });
 
       document.getElementById('confirmBookingBtn').addEventListener('click', function () {
+        // Get the course ID from the hidden input in the modal
+        const courseId = document.getElementById('modalCourseId').value;
         const csrfToken = document.getElementById('csrfToken').value;
         
         // Add debugging
-        console.log('Making booking request for course:', selectedCourseId);
+        console.log('Making booking request for course:', courseId);
         console.log('Using CSRF token:', csrfToken);
 
-        fetch(`/book/${selectedCourseId}`, { 
+        if (!courseId) {
+          console.error('No course ID found');
+          return;
+        }
+
+        // Make the fetch request with the course ID
+        fetch(`/book/${courseId}`, { 
           method: 'POST',
           headers: {
             'Accept': 'application/json',
@@ -137,7 +158,7 @@
           if (!response.ok) {
             throw new Error('Booking failed');
           }
-          return response.text();
+          return { message: 'Booking successful' };
         })
         .then((data) => {
           const message = typeof data === 'object' ? data.message : 'Booking confirmed!';
@@ -155,6 +176,12 @@
             </div>
           `;
           document.body.appendChild(toastContainer);
+
+          // Close the modal
+          const modalElement = bootstrap.Modal.getInstance(document.getElementById('confirmModal'));
+          if (modalElement) {
+            modalElement.hide();
+          }
 
           setTimeout(() => location.reload(), 2000);
         })
