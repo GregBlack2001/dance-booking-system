@@ -1,4 +1,5 @@
-{"username":"mathew123","password":"$2b$10$HA11Z79HeRoz82MiyBaW3eczhqDN/O4cvRhYWNMRSvm25QU.DyqiW","name":"mather","email":"mathew1@gmail.com","role":"user","loginAttempts":0,"lockUntil":null,"created":{"$$date":1744887086186},"_id":"MSmfZQ1n7J3JHMFi"}
 {"username":"admin1","password":"$2b$10$PSxJ3rfB751EImARYyZWqOOZ2xJDe1EOrdTLvj6RpHewam81HIKcm","name":"Admin User","email":"admin@example.com","role":"admin","_id":"admin1_1744378635042","loginAttempts":0,"lockUntil":null}
 {"username":"user1","password":"$2b$10$PSxJ3rfB751EImARYyZWqOOZ2xJDe1EOrdTLvj6RpHewam81HIKcm","name":"Regular User","email":"user@example.com","role":"user","_id":"user1_1744378635042","loginAttempts":0,"lockUntil":null}
+{"username":"testing123","password":"$2b$10$OHM2ThbI7meVbI4DHroeyOjm.VEjNa5zi7k2VauwOsyc9ZH4g9cr6","name":"test","email":"testing123@gmail.com","role":"user","loginAttempts":0,"lockUntil":null,"created":{"$$date":1744890315818},"_id":"jrFgNpHCB5NkyMWb"}
 {"username":"admin1","password":"$2b$10$PSxJ3rfB751EImARYyZWqOOZ2xJDe1EOrdTLvj6RpHewam81HIKcm","name":"Admin User","email":"admin@example.com","role":"admin","_id":"admin1_1744378635042","loginAttempts":0,"lockUntil":null}
+{"$$deleted":true,"_id":"jrFgNpHCB5NkyMWb"}
