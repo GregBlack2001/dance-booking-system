@@ -154,26 +154,6 @@ const validateCourse = [
     .toInt()
 ];
 
-// Enhanced booking validation
-const validateBooking = [
-  body('name')
-    .trim()
-    .isLength({ min: 2, max: 50 })
-    .withMessage('Name must be 2-50 characters')
-    .matches(/^[a-zA-Z\s]+$/)
-    .withMessage('Name can only contain letters')
-    .escape(),
-    
-  body('email')
-    .trim()
-    .isEmail()
-    .withMessage('Invalid email address')
-    .normalizeEmail({
-      gmail_remove_dots: false,
-      gmail_remove_subaddress: false
-    })
-];
-
 // Validate route parameters
 const validateParams = {
   courseId: param('id')
@@ -275,7 +255,6 @@ module.exports = {
   validateRegistration,
   validateLogin,
   validateCourse,
-  validateBooking,
   validatePasswordReset,
   validateNewPassword,
   validateParams,

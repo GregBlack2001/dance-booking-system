@@ -4,25 +4,15 @@ const bookingController = require('../controllers/bookingController');
 const { ensureAuthenticated, ensureAdmin } = require('../middleware/auth');
 const { 
   csrfProtection, 
-  validateBooking, 
   processValidationErrors 
 } = require('../middleware/security');
 
 // Public users booking form (for a specific course)
 router.get('/book/:id', csrfProtection, bookingController.bookingForm);
 
-// Booking handler (public or logged-in) - add validation middleware
-// Only apply validation for non-authenticated users
+// Booking handler (public or logged-in)
 router.post('/book/:id', 
   csrfProtection,
-  (req, res, next) => {
-    if (!req.session.user) {
-      // Only validate for non-authenticated users
-      validateBooking(req, res, next);
-    } else {
-      next();
-    }
-  },
   processValidationErrors,
   bookingController.bookCourse
 );
@@ -30,7 +20,7 @@ router.post('/book/:id',
 // My bookings (for logged-in users)
 router.get('/my-bookings', ensureAuthenticated, csrfProtection, bookingController.getMyBookings);
 
-// Cancel booking - validate ID parameter
+// Cancel booking
 router.post('/booking/:id/cancel', 
   ensureAuthenticated, 
   csrfProtection, 

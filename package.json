@@ -30,6 +30,8 @@
   },
   "scripts": {
   "start": "set NODE_ENV=production && node index.js",
-  "dev": "nodemon index.js"
+  "dev": "set NODE_DEBUG=* && nodemon index.js",
+  "dev:powershell": "$env:NODE_DEBUG='*'; nodemon index.js"
+
 }
 }
