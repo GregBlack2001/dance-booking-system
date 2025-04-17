@@ -199,7 +199,7 @@ const processValidationErrors = (req, res, next) => {
       '/register': 'register',
       '/login': 'login',
       '/reset-password': 'reset-password',
-      '/courses/add': 'add-course',
+      '/courses/add': 'courses',
       '/courses/edit': 'edit-course',
       '/book': 'book-course'
     };
