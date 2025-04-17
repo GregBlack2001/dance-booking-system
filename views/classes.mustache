@@ -295,6 +295,7 @@
         }
 
         console.log('Submitting booking for course:', courseId);
+        console.log('CSRF Token value:', csrfToken ? '✓ Present' : '✗ Missing');
 
         // Make the fetch request with the course ID
         fetch(`/book/${courseId}`, { 
@@ -302,42 +303,51 @@
           headers: {
             'Accept': 'application/json',
             'Content-Type': 'application/json',
-            'CSRF-Token': csrfToken
-          }
+            'CSRF-Token': csrfToken,
+            'X-Requested-With': 'XMLHttpRequest'  // Add this line
+          },
+          body: JSON.stringify({}) // Empty body for authenticated users
         })
         .then(response => {
           console.log('Response status:', response.status);
+          console.log('Response headers:', [...response.headers]);
           
-          return response.json().then(data => {
-            // Always get the JSON data first, regardless of status code
-            console.log('Response data:', data);
+          // Get the response text first to debug
+          return response.text().then(text => {
+            console.log('Raw response text:', text);
             
-            // Check for 409 status or duplicate flag in the data
-            if (response.status === 409 || (data && data.isDuplicate)) {
-              const error = new Error(data.error || 'You have already booked this course');
-              error.isDuplicate = true;
-              throw error;
-            }
-            
-            // For other error statuses
-            if (!response.ok) {
-              throw new Error(data.error || 'Booking failed');
-            }
-            
-            // Success case
-            return data;
-          }).catch(err => {
-            // Handle JSON parsing errors
-            if (err instanceof SyntaxError) {
-              // If we can't parse JSON but have a 409 status, it's still a duplicate
-              if (response.status === 409) {
-                const error = new Error('You have already booked this course');
-                error.isDuplicate = true;
-                throw error;
+            // Try to parse as JSON if there's content
+            if (text) {
+              try {
+                const data = JSON.parse(text);
+                console.log('Parsed response data:', data);
+                
+                // Check for 409 status or duplicate flag in the data
+                if (response.status === 409 || (data && data.isDuplicate)) {
+                  const error = new Error(data.error || 'You have already booked this course');
+                  error.isDuplicate = true;
+                  throw error;
+                }
+                
+                // For other error statuses
+                if (!response.ok) {
+                  throw new Error(data.error || 'Booking failed');
+                }
+                
+                // Success case
+                return data;
+              } catch (err) {
+                console.error('JSON parse error:', err);
+                throw new Error('Invalid response format from server');
               }
-              throw new Error('Unexpected response from server');
+            } else {
+              // Empty response - probably a redirect or other non-JSON response
+              if (response.ok) {
+                return { message: 'Booking successful' };
+              } else {
+                throw new Error('Unexpected response from server');
+              }
             }
-            throw err; // Re-throw other errors
           });
         })
         .then((data) => {

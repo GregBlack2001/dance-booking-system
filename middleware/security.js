@@ -2,7 +2,7 @@ const csrf = require('csurf');
 const helmet = require('helmet');
 const xss = require('xss');
 const rateLimit = require('express-rate-limit');
-const { body, validationResult } = require('express-validator');
+const { body, param, validationResult } = require('express-validator');
 
 // Rate limiting configuration
 const limiter = rateLimit({
@@ -65,6 +65,10 @@ const enhancedHelmet = () => helmet({
       ],
       fontSrc: [
         "'self'", 
+        "'self'", 
+        'https://cdnjs.cloudflare.com/',
+        'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/webfonts/',
+        'https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.2/font/fonts/',
         'https://cdnjs.cloudflare.com/',
         'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/webfonts/'
       ],
@@ -150,14 +154,63 @@ const validateCourse = [
     .toInt()
 ];
 
+// Enhanced booking validation
+const validateBooking = [
+  body('name')
+    .trim()
+    .isLength({ min: 2, max: 50 })
+    .withMessage('Name must be 2-50 characters')
+    .matches(/^[a-zA-Z\s]+$/)
+    .withMessage('Name can only contain letters')
+    .escape(),
+    
+  body('email')
+    .trim()
+    .isEmail()
+    .withMessage('Invalid email address')
+    .normalizeEmail({
+      gmail_remove_dots: false,
+      gmail_remove_subaddress: false
+    })
+];
+
+// Validate route parameters
+const validateParams = {
+  courseId: param('id')
+    .isLength({ min: 3 })
+    .withMessage('Invalid course ID format')
+    .escape(),
+    
+  bookingId: param('id')
+    .isLength({ min: 3 })
+    .withMessage('Invalid booking ID format')
+    .escape(),
+    
+  username: param('username')
+    .isLength({ min: 3, max: 20 })
+    .withMessage('Invalid username format')
+    .isAlphanumeric()
+    .withMessage('Username must be alphanumeric')
+    .escape()
+};
+
 // Process validation errors with detailed handling
 const processValidationErrors = (req, res, next) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     const errorMsg = errors.array()[0].msg;
     
-    // Differentiated error handling for different request types
-    if (req.xhr) {
+    console.log('Validation errors detected:', errors.array());
+    
+    // Check for AJAX request in multiple ways
+    const isAjax = req.xhr || 
+                  req.headers.accept?.includes('application/json') ||
+                  req.headers['content-type']?.includes('application/json') ||
+                  req.headers['x-requested-with'] === 'XMLHttpRequest';
+    
+    console.log('Is XHR request:', isAjax);
+    
+    if (isAjax) {
       return res.status(400).json({ error: errorMsg });
     }
     
@@ -167,7 +220,8 @@ const processValidationErrors = (req, res, next) => {
       '/login': 'login',
       '/reset-password': 'reset-password',
       '/courses/add': 'add-course',
-      '/courses/edit': 'edit-course'
+      '/courses/edit': 'edit-course',
+      '/book': 'book-course'
     };
 
     const matchedRoute = Object.keys(renderErrorMap).find(route => 
@@ -177,7 +231,8 @@ const processValidationErrors = (req, res, next) => {
     if (matchedRoute) {
       return res.status(400).render(renderErrorMap[matchedRoute], { 
         error: errorMsg,
-        ...(req.body && { course: req.body }) 
+        ...(req.body && { course: req.body }),
+        csrfToken: req.csrfToken() 
       });
     }
 
@@ -187,6 +242,31 @@ const processValidationErrors = (req, res, next) => {
   next();
 };
 
+// Validate password reset
+const validatePasswordReset = [
+  body('email')
+    .trim()
+    .isEmail()
+    .withMessage('Invalid email')
+    .normalizeEmail()
+];
+
+// Validate new password
+const validateNewPassword = [
+  body('password')
+    .isLength({ min: 8 })
+    .withMessage('Password must be at least 8 characters')
+    .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/)
+    .withMessage('Password must include uppercase, lowercase, number, and special character'),
+  body('confirmPassword')
+    .custom((value, { req }) => {
+      if (value !== req.body.password) {
+        throw new Error('Passwords do not match');
+      }
+      return true;
+    })
+];
+
 module.exports = {
   limiter,
   csrfProtection: csrf({ cookie: true }),
@@ -195,24 +275,9 @@ module.exports = {
   validateRegistration,
   validateLogin,
   validateCourse,
-  validateBooking: [
-    body('name').trim().isLength({ min: 2 }).withMessage('Name is required').escape(),
-    body('email').trim().isEmail().withMessage('Invalid email').normalizeEmail()
-  ],
-  validatePasswordReset: [
-    body('email').trim().isEmail().withMessage('Invalid email').normalizeEmail()
-  ],
-  validateNewPassword: [
-    body('password')
-      .isLength({ min: 8 }).withMessage('Password must be at least 8 characters')
-      .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/)
-      .withMessage('Password must include uppercase, lowercase, number, and special character'),
-    body('confirmPassword').custom((value, { req }) => {
-      if (value !== req.body.password) {
-        throw new Error('Passwords do not match');
-      }
-      return true;
-    })
-  ],
+  validateBooking,
+  validatePasswordReset,
+  validateNewPassword,
+  validateParams,
   processValidationErrors
 };

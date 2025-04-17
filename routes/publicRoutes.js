@@ -1,18 +1,20 @@
 const express = require('express');
 const router = express.Router();
 const courseModel = require('../models/courseModel');
+const { csrfProtection } = require('../middleware/security');
 
 // Homepage - includes user/admin context
-router.get('/', (req, res) => {
+router.get('/', csrfProtection, (req, res) => {
   res.render('home', {
     title: 'Welcome to DanceMove Academy',
     user: req.session.user,
-    isAdmin: req.session.user?.role === 'admin'
+    isAdmin: req.session.user?.role === 'admin',
+    csrfToken: req.csrfToken()
   });
 });
 
 // Public classes page - all users can view & book
-router.get('/classes', (req, res) => {
+router.get('/classes', csrfProtection, (req, res) => {
   courseModel.getAllCourses((err, courses) => {
     if (err) {
       console.error('Error loading courses:', err);
@@ -36,11 +38,12 @@ router.get('/classes', (req, res) => {
 });
 
 // About page
-router.get('/about', (req, res) => {
+router.get('/about', csrfProtection, (req, res) => {
   res.render('about', {
     title: 'About Us',
     user: req.session.user,
-    isAdmin: req.session.user?.role === 'admin'
+    isAdmin: req.session.user?.role === 'admin',
+    csrfToken: req.csrfToken()
   });
 });
 

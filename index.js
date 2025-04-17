@@ -33,16 +33,23 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 // Session configuration with enhanced security
 app.use(session({
-    secret: process.env.SESSION_SECRET || 'fallback_secret',
-    resave: false,
-    saveUninitialized: false,
-    cookie: { 
-      secure: process.env.NODE_ENV === 'production', 
-      httpOnly: true,
-      sameSite: 'strict',
-      maxAge: 24 * 60 * 60 * 1000 // 24 hours
-    }
+  secret: process.env.SESSION_SECRET,
+  resave: false,
+  saveUninitialized: false,
+  cookie: { 
+    secure: process.env.NODE_ENV === 'production', // Use secure cookies in production
+    httpOnly: true, // Prevent client-side JavaScript from accessing cookies
+    sameSite: 'strict', // Prevent CSRF attacks
+    maxAge: 24 * 60 * 60 * 1000 // 24 hours
+  }
 }));
+
+// Check for SESSION_SECRET in production
+if (process.env.NODE_ENV === 'production' && !process.env.SESSION_SECRET) {
+console.error('ERROR: SESSION_SECRET is not set in production environment!');
+console.error('This is a critical security issue. Shutting down server.');
+process.exit(1); // Exit with error
+}
 
 // CSRF Protection
 app.use(csrfProtection);

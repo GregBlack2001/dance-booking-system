@@ -42,18 +42,24 @@ exports.bookingForm = catchAsync(async (req, res, next) => {
 
 // Handle booking (both logged-in and public)
 exports.bookCourse = catchAsync(async (req, res, next) => {
+    const isAjaxRequest = req.xhr || req.headers.accept.includes('application/json') || req.headers['content-type']?.includes('application/json');
+    console.log('Is AJAX request:', isAjaxRequest);
     const courseId = req.params.id;
+
+    // Add these logging statements here
+    console.log('Request body:', req.body);
+    console.log('Request headers:', req.headers);
+    console.log('Is authenticated:', !!req.session.user);
+    
     console.log('Attempting to book course:', courseId);
 
-    // Find course
+    // Find course - needed for both auth and non-auth paths
     const course = await new Promise((resolve, reject) => {
         courseModel.getCourseById(courseId, (err, result) => {
             if (err) reject(err);
             resolve(result);
         });
     });
-
-    console.log('Found course:', course);
 
     if (!course) {
         if (req.xhr) {
@@ -62,7 +68,7 @@ exports.bookCourse = catchAsync(async (req, res, next) => {
         return next(new NotFoundError('Course'));
     }
 
-    // Check course availability
+    // Check course availability - needed for both auth and non-auth paths
     const availabilityResult = await new Promise((resolve, reject) => {
         courseModel.checkAvailability(courseId, (err, result) => {
             if (err) reject(err);
@@ -82,78 +88,83 @@ exports.bookCourse = catchAsync(async (req, res, next) => {
         });
     }
 
-    // Prepare booking data
-    const bookingData = req.session.user 
-        ? {
+    // Separate authenticated and unauthenticated user paths
+    let bookingData;
+    
+    // AUTHENTICATED USER PATH
+    if (req.session.user) {
+        // For authenticated users (will typically come via AJAX/XHR)
+        bookingData = {
             name: req.session.user.name || req.session.user.username,
             email: req.session.user.email || 'N/A',
             courseId,
             username: req.session.user.username
-        }
-        : {
-            name: req.body.name,
-            email: req.body.email,
-            courseId
         };
-
-    console.log('Booking data prepared:', bookingData);
-
-    // Check for duplicate bookings
-const checkDuplicateBooking = (query, callback) => {
-    console.log('Checking for duplicate booking with query:', JSON.stringify(query));
-    
-    // Make sure we have something to search by
-    if (!query || (!query.username && !query.email) || !query.courseId) {
-      console.log('Invalid query for duplicate booking check:', query);
-      return callback(null, false);
-    }
-    
-    // Construct a proper query based on available data
-    const searchQuery = { courseId: query.courseId };
-    
-    if (query.username) {
-      searchQuery.username = query.username;
-    } else if (query.email) {
-      searchQuery.email = query.email;
-    }
-    
-    console.log('Final search query:', JSON.stringify(searchQuery));
-    
-    // Find any matching bookings
-    bookingsDB.findOne(searchQuery, (err, booking) => {
-      if (err) {
-        console.error('Error in duplicate booking check:', err);
-        return callback(err);
-      }
-      
-      console.log('Duplicate booking check result:', booking ? 'Found duplicate' : 'No duplicate found');
-      callback(null, booking);
-    });
-  };
-
-    if (duplicateBooking) {
-        console.log('Duplicate booking detected!');
         
-        if (req.xhr) {
-            console.log('Sending XHR duplicate response');
-            // For AJAX requests (logged-in users using modal)
+        // Check for duplicate booking by username
+        const duplicateBooking = await new Promise((resolve, reject) => {
+            bookingModel.checkDuplicateBooking({
+                courseId,
+                username: req.session.user.username
+            }, (err, result) => {
+                if (err) reject(err);
+                resolve(result);
+            });
+        });
+        
+        if (duplicateBooking) {
+            console.log('Duplicate booking detected for user:', req.session.user.username);
+            // For AJAX requests (most authenticated bookings)
             return res.status(409).json({ 
                 error: 'You have already booked this course',
                 isDuplicate: true
             });
         }
+    } 
+    // UNAUTHENTICATED USER PATH
+    else {
+        // Validate required fields for unauthenticated users
+        if (!req.body.name || !req.body.email) {
+            return res.render('book-course', {
+                course,
+                error: 'Name and email are required',
+                spotsLeft: availabilityResult.spotsLeft || 'Unlimited',
+                csrfToken: req.csrfToken()
+            });
+        }
         
-        console.log('Rendering duplicate error page');
-        // For form submissions (non-logged in users)
-        return res.render('book-course', {
-            course,
-            error: 'You have already booked this course',
-            spotsLeft: availabilityResult.spotsLeft || 'Unlimited',
-            csrfToken: req.csrfToken()
+        bookingData = {
+            name: req.body.name,
+            email: req.body.email,
+            courseId
+        };
+        
+        // Check for duplicate booking by email for unauthenticated users
+        const duplicateBooking = await new Promise((resolve, reject) => {
+            bookingModel.checkDuplicateBooking({
+                courseId,
+                email: req.body.email
+            }, (err, result) => {
+                if (err) reject(err);
+                resolve(result);
+            });
         });
+        
+        if (duplicateBooking) {
+            console.log('Duplicate booking detected for email:', req.body.email);
+            // For form submissions (non-logged in users)
+            return res.render('book-course', {
+                course,
+                error: 'You have already booked this course',
+                spotsLeft: availabilityResult.spotsLeft || 'Unlimited',
+                csrfToken: req.csrfToken()
+            });
+        }
     }
 
-    // Create booking
+    console.log('Booking data prepared:', bookingData);
+
+    // Create booking (common path for both authenticated and unauthenticated users)
     try {
         await new Promise((resolve, reject) => {
             bookingModel.createBooking(bookingData, (err) => {
@@ -163,9 +174,11 @@ const checkDuplicateBooking = (query, callback) => {
         });
     } catch (error) {
         console.error('Booking creation error:', error);
-        if (req.xhr) {
+        
+        if (req.session.user && req.xhr) {
             return res.status(500).json({ error: 'Failed to create booking' });
         }
+        
         return res.render('book-course', {
             course,
             error: 'Failed to create booking. Please try again.',
@@ -174,11 +187,19 @@ const checkDuplicateBooking = (query, callback) => {
         });
     }
 
-    // Success response
-    if (req.xhr) {
-        return res.status(200).json({ message: "Booking successful" });
+    // Success path (separate for authenticated vs unauthenticated)
+    if (req.session.user && req.xhr) {
+        // For AJAX requests (from logged-in users)
+        return res.status(200).json({ 
+            message: "Booking successful",
+            course: {
+                id: course._id,
+                title: course.title
+            }
+        });
     }
 
+    // For form submissions (typically from non-logged in users)
     res.render('booking-success', { 
         name: bookingData.name, 
         course 
